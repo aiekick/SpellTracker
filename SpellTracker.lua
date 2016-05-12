@@ -5,8 +5,8 @@ UIPanelWindows["SpellTrackerFrame"] = { area = "doublewide", pushable = 0, width
 SpellTracker = {};
 SpellTracker.Version = GetAddOnMetadata("SpellTracker", "Version");
 SpellTracker.Build = select(4, GetBuildInfo());
-SpellTracker.BARS = {}; -- stock les abbres qui sont créé au début et sont dans le cache
-SpellTracker.SpellListToSort = {}; -- litse ordonnée des barres a afficher
+SpellTracker.BARS = {}; -- stock les abbres qui sont cree au debut et sont dans le cache
+SpellTracker.SpellListToSort = {}; -- litse ordonnee des barres a afficher
 SpellTracker.ScrollValue = 0; -- valeur de la scrolbar virtuelle
 SpellTracker.CountBarToDisplay = 0;
 SpellTracker.CountBarDisplayed = 0;
@@ -16,7 +16,7 @@ SpellTracker.EventPerSec_Ticks = 0;
 SpellTracker.RefreshTime = 0;
 SpellTracker.RaidLst = {}; -- raid tracking ( included raid palyer and raid pet )
 SpellTracker.PartyLst = {}; -- grou tracking ( included party player and party pet )
-SpellTracker.NodesToSort = {}; -- 0.48 on stocke par indexer parent des list ordonnée de childs
+SpellTracker.NodesToSort = {}; -- 0.48 on stocke par indexer parent des list ordonnee de childs
 SpellTracker.NodesToSort_Position = {};
 SpellTracker.KeyDown = ""; -- 0.55 key input
 -- Expand / Collapse Constant
@@ -31,106 +31,9 @@ local FontPathTree = {
       outline = "OUTLINE, MONOCHROME",
       shadow = 0,
     };
--- PROFILING --
 local ProfilStruct;
 local currentIndexer;
 local t0;
---[[
-function debugprofilestop()
-    return os.clock() - t0;
-end
-function debugprofilestart()
-    t0 = os.clock();
-end
-]]--
-local debugprofilestop = debugprofilestop or function()
-	local clock = os.clock(); -- un seul appel ( en gros on fige le temps le temps du traitement )
-	local tmp = (t0 or clock);
-	t0 = clock;
-	return (clock - tmp);
-end
-function PPush(reset) -- ok
-	if ( reset == true or ProfilStruct == nil ) then
-		ProfilStruct = {};
-		ProfilStruct.last = 0;
-        ProfilStruct.Started = true;
-		ProfilStruct.Funcs = {};
-        debugprofilestop();
-    end
-	if ( ProfilStruct ) then
-		if ( ProfilStruct.Started ) then 
-			ProfilStruct.last = ProfilStruct.last + 1;
-			ProfilStruct[ProfilStruct.last] = debugprofilestop();
-            local info = debug.getinfo(2, "nSlL");
-            if ( info ) then 
-                local cLine = info.currentline;
-                local fLine = info.linedefined;
-                local fName = info.name;
-                local Indexer;
-                pIndexer = tostring(fName).."."..tostring(fLine);
-                iIndexer = "i"..tostring(cLine);
-                if ( cLine == (fLine+1) ) then
-                    ProfilStruct.Funcs[pIndexer] = ProfilStruct.Funcs[pIndexer] or {};
-                    ProfilStruct.Funcs[pIndexer].level = ProfilStruct.last; 
-                    ProfilStruct.Funcs[pIndexer].val = ProfilStruct[ProfilStruct.last]; 
-                    ProfilStruct.Funcs[pIndexer].nCall = (ProfilStruct.Funcs[pIndexer].nCall or 0) + 1;
-                else
-                    ProfilStruct.Funcs[pIndexer][iIndexer] = ProfilStruct.Funcs[pIndexer][iIndexer] or {};
-                    ProfilStruct.Funcs[pIndexer][iIndexer].level = ProfilStruct.last; 
-                    ProfilStruct.Funcs[pIndexer][iIndexer].val = ProfilStruct[ProfilStruct.last]; 
-                end
-            end
-		end
-	end
-end
-function PPop() -- ok
-    if ( ProfilStruct ) then
-		ProfilStruct[ProfilStruct.last] = (ProfilStruct[ProfilStruct.last] or 0) + debugprofilestop();
-        ProfilStruct[ProfilStruct.last-1] = (ProfilStruct[ProfilStruct.last-1] or 0) + ProfilStruct[ProfilStruct.last]; 
-		ProfilStruct.last = ProfilStruct.last - 1;
-        local info = debug.getinfo(2, "nSlL");
-        if ( info ) then 
-            local cLine = info.currentline;
-            local fLine = info.linedefined; 
-            local fName = info.name;
-            local pIndexer, iIndexer;
-            pIndexer = tostring(fName).."."..tostring(fLine);
-            iIndexer = "i"..tostring(cLine);
-            if ( ProfilStruct.Funcs[pIndexer].level == ProfilStruct.last ) then 
-                ProfilStruct.Funcs[pIndexer].val = ProfilStruct[ProfilStruct.last]; 
-            end
-            ProfilStruct.Funcs[pIndexer] = ProfilStruct.Funcs[pIndexer] or {};
-            ProfilStruct.Funcs[pIndexer][iIndexer] = ProfilStruct.Funcs[pIndexer][iIndexer] or {};
-            ProfilStruct.Funcs[pIndexer][iIndexer].val = ProfilStruct[ProfilStruct.last]; 
-            ProfilStruct.Funcs[pIndexer][iIndexer].level = ProfilStruct.last; 
-            
-        end
-        return ProfilStruct[ProfilStruct.last];
-    else
-		return 0;
-	end
-end
-function ReportProfiling(i, seuilPercent)
-    local tTotal = ProfilStruct[i];
-    local tElapsedPercentFuncs = {};
-    for k,v in pairs(ProfilStruct.Funcs) do
-        if ( k and v ) then
-            tElapsedPercentFuncs[k] = v.val*100/tTotal;
-            if ( tElapsedPercentFuncs[k] > seuilPercent ) then               
-                print(tostring(k).." x"..tostring(v.nCall).." t="..string.format("%.2f",tElapsedPercentFuncs[k]).."%");
-                for kk,vv in pairs(v) do
-                    if ( kk and vv and type(vv) == "table" ) then
-                        local p = vv.val*100/tTotal;
-                        if ( p > seuilPercent ) then               
-                            print(tostring(k).."."..tostring(kk).." x"..tostring(v.nCall).." t="..string.format("%.2f",p).."%");
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
----------------
 SpellTracker.CombatFlags = {
 	[0x00004000]="TYPE_OBJECT",
 	[0x00002000]="TYPE_GUARDIAN",
@@ -479,7 +382,7 @@ else
 	L["TGT_REACTION"] = L["TARGET"].." "..L["REACTION"].." :";
 	L["TGT_NAME"] = L["TARGET"].." "..L["NAME"].." :";
 end
--- Fonctions statiques GUI liées au XML
+-- Fonctions statiques GUI liees au XML
 -- OnLoad ( SpellTrackerDB existe pas encore )
 function SpellTrackerButtonTemplate_OnLoad(self)
 	self.selected = false;
@@ -507,9 +410,7 @@ function SpellTrackerFrame_OnLoad(self)
 end
 function SpellTrackerFrame_Init(self)
 	local WellLoaded = false;
-	
-	--SpellTracker:ProfilingRecordFuncs(SpellTrackerDB, SpellTracker, true);
-    
+
 	SpellTrackerDB = SpellTrackerDB or {};
 
 	print(L["SPT_CUR_VERS"]..SpellTracker.Version);
@@ -892,6 +793,7 @@ function SpellTrackerPopupColumnFilterDlg_Create()
 	   ColumnFilterDlg.var = {};
 	   ColumnFilterDlg.var.FilterString = "";
 	   
+	   --[[
 	   local EditBoxHeight = 20;
 	   local EditFilterCompletion = CreateFrame("EditBox", "SpellTrackerColumnFilterEditFilterCompletion", ColumnFilterDlg, "InputBoxTemplate");
 	   if ( EditFilterCompletion ) then
@@ -900,6 +802,7 @@ function SpellTrackerPopupColumnFilterDlg_Create()
 		  EditFilterCompletion:SetHeight(EditBoxHeight);
 		  EditFilterCompletion:Show();
 	   end
+	   ]]
 	   
 	   local ApplyBtnHeight = 20;
 	   local ApplyButton = CreateFrame("Button", "SpellTrackerColumnFilterConfigDlgApplyBtn", ColumnFilterDlg, "UIPanelButtonTemplate");
@@ -912,11 +815,15 @@ function SpellTrackerPopupColumnFilterDlg_Create()
 		  ApplyButton:Show();
 	   end
 	   
-	   ColumnFilterDlg.nBarDisplayed = 6; -- nombre de barres
+	   ColumnFilterDlg.nBarDisplayed = 10; -- nombre de barres
 	   
 	   local Container = CreateFrame("Frame", "SpellTrackerPopupColumnFilterDlgContainer", ColumnFilterDlg);
 	   if ( Container ) then
-		  Container:SetPoint("TOPLEFT", EditFilterCompletion, "BOTTOMLEFT", 0, -2);
+			if ( EditFilterCompletion ) then
+				Container:SetPoint("TOPLEFT", EditFilterCompletion, "BOTTOMLEFT", 0, -2);
+			else
+				Container:SetPoint("TOPLEFT", ColumnFilterDlg, "TOPLEFT", 0, -2);
+			end
 		  Container:SetPoint("BOTTOMRIGHT", ApplyButton, "TOPRIGHT", -5, -2);
 		  
 		  Container:SetScript("OnMouseWheel",SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel);
@@ -953,15 +860,20 @@ function SpellTrackerPopupColumnFilterDlg_Create()
 		  
 		  local NewHeightContainer = ColumnFilterDlg.nBarDisplayed * ( itH + math.abs(offsetY) ) + 2;
 		  
-		  local NewHeight = NewHeightContainer + ApplyBtnHeight + EditBoxHeight;
+		  local NewHeight = NewHeightContainer + ApplyBtnHeight;
+		  
+			if ( EditFilterCompletion ) then
+				NewHeight = NewHeight + EditBoxHeight;
+			end
+			
 		  ColumnFilterDlg:SetHeight(NewHeight);        
 	   end
 	end
 	ColumnFilterDlg:Hide();
 end
-function SpellTrackerPopupColumnFilterDlgBtn_Click(self) -- DataStruct dlg button click
+function SpellTrackerPopupColumnFilterDlgBtn_Click(self) -- ColumnFilter dlg button click
 	if ( self.var.item ) then
-		print(self.var.item);
+		--print(self.var.item);
 		local ColumnFilterDlg = SpellTrackerPopupColumnFilterDlg;
 		local help = SpellTrackerDB.Params.CurrentColumnFilter;
 		if ( ColumnFilterDlg and help ) then
@@ -979,7 +891,7 @@ function SpellTrackerPopupColumnFilterDlgBtn_Click(self) -- DataStruct dlg butto
 		end
 	end
 end
-function SpellTrackerPopupColumnFilterDlg_ShowOrHide(self) -- DataStruct dlg show
+function SpellTrackerPopupColumnFilterDlg_ShowOrHide(self) -- ColumnFilter dlg show
 	local ColumnFilterDlg = SpellTrackerPopupColumnFilterDlg;
 	if ( ColumnFilterDlg ) then
 		local visible = false;
@@ -987,7 +899,7 @@ function SpellTrackerPopupColumnFilterDlg_ShowOrHide(self) -- DataStruct dlg sho
 			if ( ColumnFilterDlg:IsVisible() ) then -- si dÃ©ja ouvert on cache
 				visible = true;
 				ColumnFilterDlg:Hide(); -- on cache si on a ouvert l'item courant et qu'on veut le cahcer
-			end
+			end 
 		end
 		if ( visible == false ) then
 			ColumnFilterDlg.ScrollValue = 0; -- reset de la position de la scrollbar virtuelle
@@ -998,13 +910,13 @@ function SpellTrackerPopupColumnFilterDlg_ShowOrHide(self) -- DataStruct dlg sho
 		end
 	end
 end
-function SpellTrackerPopupColumnFilterDlg_Hide() -- DataStruct dlg hide
+function SpellTrackerPopupColumnFilterDlg_Hide() -- ColumnFilter dlg hide
 	local ColumnFilterDlg = SpellTrackerPopupColumnFilterDlg;
 	if ( ColumnFilterDlg ) then
 		ColumnFilterDlg:Hide();
 	end
 end
-function SpellTrackerPopupColumnFilterDlg_Apply() -- DataStruct dlg apply FilterString
+function SpellTrackerPopupColumnFilterDlg_Apply() -- ColumnFilter dlg apply FilterString
 	local ColumnFilterDlg = SpellTrackerPopupColumnFilterDlg;
 	if ( ColumnFilterDlg ) then
 		if ( ColumnFilterDlg.tmpArr ) then
@@ -1059,8 +971,14 @@ function SpellTrackerPopupColumnFilterDlgBtn_Update(help, scrollUpdate) -- Colum
 							BarIdx = BarIdx + 1;
 							if ( GuiBar ) then
 								str = v;
-								if ( ColumnFilterDlg.tmpArr[v] == 1 ) then -- 0 == false / 1 == true / 2 == false + desactivÃ© / 3 == true + dÃ©sactivÃ©
+								if ( ColumnFilterDlg.tmpArr[v] == 0 ) then -- 0 == false / 1 == true / 2 == false + desactivÃ© / 3 == true + dÃ©sactivÃ©
+									str = "[] "..str;
+								elseif ( ColumnFilterDlg.tmpArr[v] == 1 ) then -- 0 == false / 1 == true / 2 == false + desactivÃ© / 3 == true + dÃ©sactivÃ©
 									str = "[x] "..str;
+								elseif ( ColumnFilterDlg.tmpArr[v] == 2 ) then -- 0 == false / 1 == true / 2 == false + desactivÃ© / 3 == true + dÃ©sactivÃ©
+									str = "[][des] "..str;
+								elseif ( ColumnFilterDlg.tmpArr[v] == 3 ) then -- 0 == false / 1 == true / 2 == false + desactivÃ© / 3 == true + dÃ©sactivÃ©
+									str = "[x][des] "..str;
 								end
 								GuiBar.var.Label:SetText(str);
 								GuiBar.var.item = v;
@@ -1075,8 +993,6 @@ function SpellTrackerPopupColumnFilterDlgBtn_Update(help, scrollUpdate) -- Colum
 	end
 end
 function SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel (self, delta, stepSize) -- se produit quand la molette de la sourie roule
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel");
-    
 	local ColumnFilterDlg = SpellTrackerPopupColumnFilterDlg;
 	if ( ColumnFilterDlg and delta ) then
 		local minVal, maxVal = 0, ColumnFilterDlg.nBarToDisplay-ColumnFilterDlg.nBarDisplayed-1; -- 0.51 (ajout du -1 pour aps avoir une barre noire ( espace ) en bout de liste
@@ -1088,20 +1004,12 @@ function SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel (self, de
 		end
 		SpellTrackerPopupColumnFilterDlgBtn_Update(SpellTrackerDB.Params.CurrentColumnFilter, true);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel");
 end	
 ---
 function hideSpellTrackerFrameButton_OnClick(self) -- Bouton pour fermer la mainFrame
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "hideSpellTrackerFrameButton_OnClick");
-    
 	SpellTrackerMinimapButton_OnClick(self);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "hideSpellTrackerFrameButton_OnClick");
 end
-function resetSpellTrackerButton_OnClick(self) -- Bouton pour reset les sorts traqués
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "resetSpellTrackerButton_OnClick");
-	
+function resetSpellTrackerButton_OnClick(self) -- Bouton pour reset les sorts traques
 	local function AcceptFunc()
 		SpellTracker.ResetView();
 	end
@@ -1111,12 +1019,8 @@ function resetSpellTrackerButton_OnClick(self) -- Bouton pour reset les sorts tr
 	end
 
 	GetChoice(AcceptFunc,CancelFunc);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "resetSpellTrackerButton_OnClick");
 end
 function GetChoice(AcceptFunc,CancelFunc) -- 0.71 -- dlg bug fix
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "GetChoice");
-		
 	if ( AcceptFunc and CancelFunc ) then
 	
 		local function ClearViewDlg_Accept(self)
@@ -1147,41 +1051,25 @@ function GetChoice(AcceptFunc,CancelFunc) -- 0.71 -- dlg bug fix
 		
 		StaticPopup_Show("CLEAR_VIEW_DLG");
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "GetChoice");
 end
 function RecordingButtonSpellTrackerButton_OnClick(self) -- 0.47 / button for recording / pause or stop control en advertissement to user
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "RecordingButtonSpellTrackerButton_OnClick");
-    
 	if ( SpellTrackerDB.Recording_Mode == 0 ) then SpellTrackerDB.Recording_Mode = 1; GameTooltip:SetText(L["MODERECORDING"]);
 	elseif ( SpellTrackerDB.Recording_Mode == 1 ) then SpellTrackerDB.Recording_Mode = 0; GameTooltip:SetText(L["MODEPAUSE"]);
 	end
 	
 	SpellTracker_SetRecordingMode(SpellTrackerDB.Recording_Mode);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "RecordingButtonSpellTrackerButton_OnClick");
 end
 function ViewPlayingButtonSpellTrackerButton_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ViewPlayingButtonSpellTrackerButton_OnClick");
-    
 	if ( SpellTrackerDB.ViewPlaying == 0 ) then SpellTrackerDB.ViewPlaying = 1; GameTooltip:SetText(L["VIEWPLAYING"]);
 	elseif ( SpellTrackerDB.ViewPlaying == 1 ) then SpellTrackerDB.ViewPlaying = 0; GameTooltip:SetText(L["VIEWPAUSE"]);
 	end
 	
 	SpellTracker_SetViewPlayingMode(SpellTrackerDB.ViewPlaying);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ViewPlayingButtonSpellTrackerButton_OnClick");
 end
 function ViewRefreshButtonSpellTrackerButton_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ViewRefreshButtonSpellTrackerButton_OnClick");
-    
 	SpellTracker:RefreshView();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ViewRefreshButtonSpellTrackerButton_OnClick");
 end
 function NumLineDisplayButtonSpellTrackerButton_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "NumLineDisplayButtonSpellTrackerButton_OnClick");
-    
 	-- SpellTrackerDB.NumLineDisplay = SpellTrackerDB.NumLineDisplay or 0; -- 0 Amount / 1 Ticks / 2 Best
 	if ( SpellTrackerDB.NumLineDisplay == 0 ) then -- 0 Amount / 1 Ticks / 2 Best
 		SpellTrackerDB.NumLineDisplay = 1;
@@ -1202,12 +1090,8 @@ function NumLineDisplayButtonSpellTrackerButton_OnClick(self)
 	
 	SpellTracker:ReComputeFilteredSpellList();
 	SpellTracker:UpdateFrame();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "NumLineDisplayButtonSpellTrackerButton_OnClick");
 end
 function ContextButtonSpellTrackerButton_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ContextButtonSpellTrackerButton_OnClick");
-
 	if ( SpellTrackerDB.Context == 0 ) then -- Context = 0 / Context Less = 1
 		SpellTrackerDB.Context = 1;
 		SpellTrackerFrameMainMenuTitleContextBtnLabel:SetText(L["CONTEXTLESS_MODE_SHORT"]);
@@ -1219,20 +1103,12 @@ function ContextButtonSpellTrackerButton_OnClick(self)
 	end
 	
 	SpellTracker:UpdateFrame();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ContextButtonSpellTrackerButton_OnClick");
 end
 function SpellTrackerButtonTemplate_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerButtonTemplate_OnClick");
-    
 	SpellTracker:UpdateFilterButton(self);
 	SpellTracker:UpdateDisplayedFiterFromButtons();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerButtonTemplate_OnClick");
 end
 function SpellTrackerFilterButtonTemplate_OnClick(self, button) -- filter to activate or deactivate here
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerButtonTemplate_OnClick");
-    
 	if ( button == "RightButton" ) then
 		if ( self.help and string.match(SpellTrackerDB.Params.DisplayedFilters, self.help) ) then
 			--SpellTrackerPopupColumnFilterDlg_ShowOrHide(self);
@@ -1241,12 +1117,8 @@ function SpellTrackerFilterButtonTemplate_OnClick(self, button) -- filter to act
 		SpellTracker:UpdateFilterButton(self);
 		SpellTracker:RefreshView();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerButtonTemplate_OnClick");
 end
 function SpellTrackerButton_UpdateTitle()
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerButton_UpdateTitle");
-    
 	local TitleStr = "";
 	
 	if ( SpellTrackerDB.ViewPlaying == 0 or SpellTracker.EventPerSec_Ticks == 0 ) then TitleStr = "( "..string.format("%.2f", SpellTracker.RefreshTime).." ms) ";
@@ -1266,12 +1138,8 @@ function SpellTrackerButton_UpdateTitle()
 	end
 	
 	SpellTrackerFrameMainMenuTitleTitleText:SetText(TitleStr);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerButton_UpdateTitle");
 end
 function SpellTrackerButton_ShowTooltip(self, LMBtextToShow, LMDtextToShow)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerButton_ShowTooltip");
-    
 	if ( LMBtextToShow and LMDtextToShow ) then
 		GameTooltip:SetOwner(self);
 		GameTooltip:SetText(L["LeftMouseButton"].." :"..LMBtextToShow);
@@ -1286,12 +1154,8 @@ function SpellTrackerButton_ShowTooltip(self, LMBtextToShow, LMDtextToShow)
 		GameTooltip:SetText(SpellTrackerDB.MsgToolTip);
 		GameTooltip:Show();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerButton_ShowTooltip");
 end
 function SpellTrackerInfosButton_ShowTooltip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerInfosButton_ShowTooltip");
-    
 	if( SpellTracker.Infos ) then -- 0.48
 		GameTooltip:SetOwner(self);
 		GameTooltip:SetText(L["INFOS_CUR_TRACK"]);
@@ -1324,29 +1188,16 @@ function SpellTrackerInfosButton_ShowTooltip(self)
 		]]--
 		GameTooltip:Show();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerInfosButton_ShowTooltip");
 end
 function SpellTrackerItemFilterButton_ShowTooltip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerItemFilterButton_ShowTooltip");
-    
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerItemFilterButton_ShowTooltip");
 end
 function SpellTrackerTitleFrameButton_ShowTooltip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerTitleFrameButton_ShowTooltip");
-    
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerTitleFrameButton_ShowTooltip");
+
 end
 function SpellTrackerButton_HideTooltip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerButton_HideTooltip");
-    
 	GameTooltip:Hide();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerButton_HideTooltip");
 end
-function SpellTrackerBar_OnEnter(self) -- affiche des infos sup sur les sort traqués
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_OnEnter");
-    
+function SpellTrackerBar_OnEnter(self) -- affiche des infos sup sur les sort traques
 	if ( self.VAR.Used ) then 
 		SpellTracker:CalcEventsPerSec(true); -- on refesh ev/s
 		GameTooltip:SetOwner(self);
@@ -1599,14 +1450,9 @@ function SpellTrackerBar_OnEnter(self) -- affiche des infos sup sur les sort tra
 			end
 		end
 	end
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_OnEnter");
 end
 function SpellTrackerBar_FormatAmountValueToString(val)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_FormatAmountValueToString");
-    
 	local ret = "";
-	
 	if (string.len(tostring(val)) > 10 ) then
 		ret = string.format("%.0f", val/1000000000).."M";
     elseif (string.len(tostring(val)) > 7 ) then
@@ -1616,23 +1462,13 @@ function SpellTrackerBar_FormatAmountValueToString(val)
 	else
 		ret = string.format("%.0f", val);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_FormatAmountValueToString");
-	
 	return ret;
 end
 function SpellTrackerBar_FormatAmountToPercentValueToString(val, precision, total)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_FormatAmountToPercentValueToString");
-    
 	local percentVal = (val*100)/total;
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_FormatAmountToPercentValueToString");
-
 	return string.format("(%."..tostring(0).."f", percentVal).."%)";	
 end
 function SpellTrackerBar_GetColorCodeFromStatusBarColor(StatusBar)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromStatusBarColor");
-    
 	local codeWow = nil;
 	if ( StatusBar ) then
 		local r,g,b,a = StatusBar:GetStatusBarColor();
@@ -1640,23 +1476,14 @@ function SpellTrackerBar_GetColorCodeFromStatusBarColor(StatusBar)
 			codeWow = SpellTrackerBar_GetColorCodeFromRGB(r, g, b);
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromStatusBarColor"); 
-	
 	return codeWow; 
 end
 function SpellTrackerBar_SetTextureColorFromColorTab(TextureToColorise, ColorTab)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_SetTextureColorFromStatusBarColor");
-    
 	if ( TextureToColorise and ColorTab ) then
 		TextureToColorise:SetVertexColor(ColorTab.r,ColorTab.g,ColorTab.b, 1.0);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_SetTextureColorFromStatusBarColor"); 
 end
 function SpellTrackerBar_GetColorCodeFromRGB(red, green, blue) -- de 0 Ã  1 en float
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromRGB");
-    
 	local codeWow = nil;
 	if ( red and green and blue ) then
 		local redColor = string.format("%0.2X", math.ceil(string.format("%.2f", red)*255));
@@ -1664,30 +1491,16 @@ function SpellTrackerBar_GetColorCodeFromRGB(red, green, blue) -- de 0 Ã  1 en f
 		local blueColor = string.format("%0.2X", math.ceil(string.format("%.2f", blue)*255));
 		codeWow = "|cFF"..tostring(redColor)..tostring(greenColor)..tostring(blueColor);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromRGB"); 
-	
 	return codeWow; 
 end
 function SpellTrackerBar_GetColorCodeFromRGBStruct(rgbStruct) -- de 0 Ã  1 en float
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromRGBStruct");
-    
 	local codeWow = SpellTrackerBar_GetColorCodeFromRGB(rgbStruct.r, rgbStruct.g, rgbStruct.b);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_GetColorCodeFromRGBStruct"); 
-	
 	return codeWow; 
 end
 function SpellTrackerBar_OnLeave(self)
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_OnLeave");
-    
 	GameTooltip:Hide();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_OnLeave");
 end
 function SpellTrackerBar_OnClick(self, button) -- 0.47 -- mode arborescent -- 0.48 expand / collapse -- 0.50 mode arbo OK -- 0.52 -- 0.53 bug fix -- 0.55 Key Input
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerBar_OnClick");
-    
 	if ( self.VAR.Used ) then 
 		SpellTracker:CalcEventsPerSec(true); -- on refesh ev/s
 		local NodeMode = 0;
@@ -1730,8 +1543,6 @@ function SpellTrackerBar_OnClick(self, button) -- 0.47 -- mode arborescent -- 0.
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerBar_OnClick");
 end
 function SpellTrackerBarSpellIconBtn_OnClick(self, button) -- 0.56 spell tooltip
 	if ( button == "LeftButton" ) then
@@ -1759,37 +1570,23 @@ function SpellTrackerBarSpellIconBtn_OnLeave(self) -- 0.56 spell tooltip
 	GameTooltip:Hide();
 end
 function SpellTrackerMinimapButton_UpdateTitle(EventPerSec)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerMinimapButton_UpdateTitle");
-    
 	if ( EventPerSec == nil or EventPerSec == 0 ) then
 		SpellTrackerMinimapButton.label:SetText("SPT "..SpellTracker.Version);
 	else
 		SpellTrackerMinimapButton.label:SetText("SPT "..tostring(EventPerSec).."ev/s");
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerMinimapButton_UpdateTitle");
 end
 function SpellTrackerMinimapButton_OnEnter(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerMinimapButton_OnEnter");
-    
 	GameTooltip:SetOwner(self);
 	GameTooltip:SetText("SpellTracker "..SpellTracker.Version);
 	--GameTooltip:AddDoubleLine(SpellTrackerDB.Params.FriendlyColor.."Heal :",SpellTrackerDB.Params.FriendlyColor..tostring(SpellTrackerDB.currentSessionHealTotal));
 	--GameTooltip:AddDoubleLine(SpellTrackerDB.Params.HostileColor.."Damage :",SpellTrackerDB.Params.HostileColor..tostring(SpellTrackerDB.currentSessionDamageTotal));
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerMinimapButton_OnEnter");
 end
 function SpellTrackerMinimapButton_OnLeave(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerMinimapButton_OnLeave");
-    
 	GameTooltip:Hide();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerMinimapButton_OnLeave");
 end
 function SpellTrackerMinimapButton_OnClick(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerMinimapButton_OnClick");
-    
 	if (SpellTrackerFrame) then
         if(SpellTrackerFrame:IsVisible() ) then
 			CloseDropDownMenus();
@@ -1806,46 +1603,26 @@ function SpellTrackerMinimapButton_OnClick(self)
 			SpellTracker:UpdateFrame();
 		end
     end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerMinimapButton_OnClick");
 end
 function SpellTrackerResizeFrame_OnEnter(self) -- widget de redimentionnement -- survol IN
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnEnter");
-    
 	if ( SpellTracker:IsInCombat() == false ) then
 		SpellTrackerFrameResizeFrameTexture:SetDesaturated(false);
 		SpellTrackerFrameResizeFrameTexture:SetAlpha(1);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnEnter");
 end
 function SpellTrackerResizeFrame_OnLeave(self) -- widget de redimentionnement -- survol OUT
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnLeave");
-    
 	if ( SpellTracker:IsInCombat() == false ) then
 		SpellTrackerFrameResizeFrameTexture:SetDesaturated(true);
 		SpellTrackerFrameResizeFrameTexture:SetAlpha(0);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnLeave");
 end
 function SpellTrackerResizeFrame_OnMouseDown(self) -- widget et de redimentionnement -- CLICK DOWN -- 0.53 (function ext)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseDown");
-    
 	SpellTracker:StartFrameResize();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseDown");
 end
 function SpellTrackerResizeFrame_OnMouseUp(self) -- widget de redimentionnement -- CLICK UP -- 0.53 (function ext)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseUp");
-    
 	SpellTracker:EndFrameResize();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseUp");
 end
 function SpellTrackerFrameContainerVirtualScrollBar_OnMouseWheel (self, delta, stepSize) -- se produit quand la molette de la sourie roule
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerFrameContainerVirtualScrollBar_OnMouseWheel");
-    
 	-- SpellTracker.ScrollValue => correspond au numéro de la barre affiché en haut
 	-- SpellTracker.CountBarToDisplay => correspond au nombre de barres à afficher 
 	-- SpellTracker.CountBarDisplayed => correspond au nombres de bars qui puevent etre affcihés en meme temps.
@@ -1862,12 +1639,8 @@ function SpellTrackerFrameContainerVirtualScrollBar_OnMouseWheel (self, delta, s
 		
 		SpellTracker:UpdateFrame();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerFrameContainerVirtualScrollBar_OnMouseWheel");
 end	
 function SpellTrackerFrame_OnEvent(self, event, ...)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerFrame_OnEvent");
-    
 	if ( event == "VARIABLES_LOADED" ) then
 		SpellTrackerFrame_Init(self);
 		self:UnregisterEvent("VARIABLES_LOADED");
@@ -1899,12 +1672,8 @@ function SpellTrackerFrame_OnEvent(self, event, ...)
 		SpellTracker:EndFight();
 	end
 	SpellTracker:CalcEventsPerSec(true); -- refresh ev/s
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerFrame_OnEvent");
 end
 function SpellTracker_FilterDropDownMenu_Init() -- FILTER MENU -- 0.54 ok
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_Init");
-	
 	-- INIT TARGET
 	UIDropDownMenu_Initialize(SpellTracker_FilterDropDownMenu, SpellTracker_FilterDropDownMenu_OnLoad, "MENU");
 	SpellTrackerFrameMainMenuTitleFilterBtn:SetScript("OnClick", 
@@ -1912,12 +1681,8 @@ function SpellTracker_FilterDropDownMenu_Init() -- FILTER MENU -- 0.54 ok
 			ToggleDropDownMenu(1, nil, SpellTracker_FilterDropDownMenu, SpellTrackerFrameMainMenuTitleFilterBtn, 0, 0);
 		end
 	);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_Init");
 end
 function SpellTracker_FilterDropDownMenu_OnLoad(self, lvl) -- FILTER MENU -- 0.54 ok
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_OnLoad");
-	
 	if ( SpellTracker:IsInCombat() == false ) then
 		lvl = lvl or 1;
 		local str = "";
@@ -1950,22 +1715,14 @@ function SpellTracker_FilterDropDownMenu_OnLoad(self, lvl) -- FILTER MENU -- 0.5
 	else
 		print(L["NOCOMBAT_MSG1"]);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_OnLoad");
 end
 function SpellTracker_FilterDropDownMenu_ShowTootlip(self) -- FILTER MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow = L["TOOLTIP_MSG3"];
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_FilterDropDownMenu_ShowTootlip");
 end
 function SpellTracker_ViewPlaying_ShowTootlip(self) -- FILTER MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_ViewPlaying_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow;
 	if ( SpellTrackerDB.ViewPlaying == 1 ) then
@@ -1975,12 +1732,8 @@ function SpellTracker_ViewPlaying_ShowTootlip(self) -- FILTER MENU
 	end
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_ViewPlaying_ShowTootlip");
 end
 function SpellTracker_RecordingMode_ShowTootlip(self) -- FILTER MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_RecordingMode_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow;
 	if ( SpellTrackerDB.Recording_Mode == 1 ) then
@@ -1990,22 +1743,14 @@ function SpellTracker_RecordingMode_ShowTootlip(self) -- FILTER MENU
 	end
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_RecordingMode_ShowTootlip");
 end
 function SpellTracker_ViewRefresh_ShowTootlip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_ViewRefresh_ShowTootlip");
-	
 	GameTooltip:SetOwner(self);
 	local label = L["REFRESH"];
 	GameTooltip:SetText(label);
 	GameTooltip:Show();
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_ViewRefresh_ShowTootlip");
 end
 function SpellTracker_NumLineDisplay_ShowTootlip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_NumLineDisplay_ShowTootlip");
-	
 	GameTooltip:SetOwner(self);
 	local label;
 	if ( SpellTrackerDB.NumLineDisplay == 0 ) then
@@ -2017,12 +1762,8 @@ function SpellTracker_NumLineDisplay_ShowTootlip(self)
 	end
 	GameTooltip:SetText(label);
 	GameTooltip:Show();
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_NumLineDisplay_ShowTootlip");
 end
 function SpellTracker_Context_ShowTootlip(self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_Context_ShowTootlip");
-	
 	-- Context = 0 / Context Less = 1
 	
 	GameTooltip:SetOwner(self);
@@ -2034,12 +1775,8 @@ function SpellTracker_Context_ShowTootlip(self)
 	end
 	GameTooltip:SetText(label);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_Context_ShowTootlip");
 end
 function SpellTracker_SortBtn_ShowTootlip(id, self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SortBtn_ShowTootlip");
-	
 	-- SpellTrackerDB.CurrentSort  -- 1 Total / 2 hit / 3 crit / 4 overcrit / 5 over / 6 overAbsorb / 7 CritAbsorb / 8 Absorb
 	
 	GameTooltip:SetOwner(self);
@@ -2055,24 +1792,16 @@ function SpellTracker_SortBtn_ShowTootlip(id, self)
 	end
 	GameTooltip:SetText(label);
 	GameTooltip:Show();
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SortBtn_ShowTootlip");
 end
 function SpellTracker_SortBtn_OnClick(id, self)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SortBtn_OnClick");
-    
 	-- SpellTrackerDB.CurrentSort  -- 1 Total / 2 hit / 3 crit / 4 overcrit / 5 over / 6 overAbsorb / 7 CritAbsorb / 8 Absorb
 	
 	SpellTracker_SwitchSorting(id, self);
 	
 	SpellTracker:ReComputeFilteredSpellList();
 	SpellTracker:UpdateFrame();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SortBtn_OnClick");
 end
 function SpellTracker_SwitchSorting(id)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SortBtn_ShowTootlip");
-	
 	-- SpellTrackerDB.CurrentSort  -- 1 Total / 2 hit / 3 crit / 4 overcrit / 5 over / 6 overAbsorb / 7 CritAbsorb / 8 Absorb
 	
 	SpellTrackerDB.CurrentSort = id;
@@ -2097,8 +1826,6 @@ function SpellTracker_SwitchSorting(id)
 	elseif ( SpellTrackerDB.CurrentSort == 7 ) then SpellTrackerFrameMainMenuTitleSortCritAbsorbBtn:LockHighlight();
 	elseif ( SpellTrackerDB.CurrentSort == 8 ) then SpellTrackerFrameMainMenuTitleSortAbsorbBtn:LockHighlight();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SortBtn_ShowTootlip");
 end
 -- function for adding buttons in the context menu
 function SpellTracker_AddDropDownItem(...)
@@ -2145,8 +1872,6 @@ function SpellTracker_AddDropDownItem(...)
   wipe(it);
 end
 function SpellTracker_TargetDropDownMenu_Init() -- TARGET MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_TargetDropDownMenu_Init");
-
 	SpellTracker_TargetDropDownMenu.displayMode = "MENU"
 	
 	SpellTracker_TargetDropDownMenu.initialize = function(self, level)
@@ -2164,8 +1889,6 @@ function SpellTracker_TargetDropDownMenu_Init() -- TARGET MENU
 			ToggleDropDownMenu(1, nil, SpellTracker_TargetDropDownMenu, SpellTrackerFrameMainMenuTitleOtherTarget, 0, 0);
 		end
 	);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_TargetDropDownMenu_Init");
 end
 function SpellTracker_SwitchTarget(mode)
 	local AcceptFunc = nil;
@@ -2230,8 +1953,6 @@ function SpellTracker_SwitchTarget(mode)
 	GetChoice(AcceptFunc,CancelFunc);
 end
 function SpellTracker_TargetDropDownMenu_ShowTootlip(self) -- TARGET MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_TargetDropDownMenu_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow = "";
 	if ( SpellTrackerDB.Tracking_Target == 1 ) then strToShow = L["TOOLTIP_MSG4"];
@@ -2242,12 +1963,8 @@ function SpellTracker_TargetDropDownMenu_ShowTootlip(self) -- TARGET MENU
 	end
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_TargetDropDownMenu_ShowTootlip");
 end
 function SpellTracker_SrcOrDstDropDownMenu_Init() -- SRC/DST MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SrcOrDstDropDownMenu_Init");
-    
 	-- INIT SRC OR DST
 	SpellTracker_SrcOrDstDropDownMenu.displayMode = "MENU"
 
@@ -2263,8 +1980,6 @@ function SpellTracker_SrcOrDstDropDownMenu_Init() -- SRC/DST MENU
 			ToggleDropDownMenu(1, nil, SpellTracker_SrcOrDstDropDownMenu, SpellTrackerFrameMainMenuTitleAttackORAttacked, 0, 0);
 		end
 	);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SrcOrDstDropDownMenu_Init");
 end
 function SpellTracker_SwitchTrackingMode(mode)
 	local AcceptFunc = nil;
@@ -2287,8 +2002,6 @@ function SpellTracker_SwitchTrackingMode(mode)
 	GetChoice(AcceptFunc,CancelFunc);
 end
 function SpellTracker_SrcOrDstDropDownMenu_ShowTootlip(self) -- SRC/DST MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SrcOrDstDropDownMenu_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow = "";
 	if ( SpellTrackerDB.Tracking_Mode == 1 ) then strToShow = L["TRACK_SRC"];
@@ -2296,12 +2009,8 @@ function SpellTracker_SrcOrDstDropDownMenu_ShowTootlip(self) -- SRC/DST MENU
 	end
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SrcOrDstDropDownMenu_ShowTootlip");
 end
 function SpellTracker_RecordingDropDownMenu_Init() -- 0.47 -- RECORDING MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_Init");
-    
 	SpellTrackerDB.MenuDropDown_RECORDING = SpellTrackerDB.MenuDropDown_RECORDING or {}
 	
 	SpellTrackerDB.MenuDropDown_RECORDING.It1 = SpellTrackerDB.MenuDropDown_RECORDING.It1 or {};
@@ -2324,12 +2033,8 @@ function SpellTracker_RecordingDropDownMenu_Init() -- 0.47 -- RECORDING MENU
 			ToggleDropDownMenu(1, nil, SpellTracker_RecordingDropDownMenu, SpellTrackerFrameMainMenuTitleRecordBtn, 0, 0);
 		end
 	);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_Init");
 end
 function SpellTracker_RecordingDropDownMenu_OnLoad() -- 0.47 -- RECORDING MENU
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_OnLoad");
-    
 	info = {};
     info.text = SpellTrackerDB.MenuDropDown_RECORDING.It1.txt;
     info.value = "OptionVariable";
@@ -2359,12 +2064,8 @@ function SpellTracker_RecordingDropDownMenu_OnLoad() -- 0.47 -- RECORDING MENU
 			SpellTracker_SetViewPlayingMode(L["STOP"])
 		end 
 	UIDropDownMenu_AddButton(info);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_OnLoad");
 end
 function SpellTracker_RecordingDropDownMenu_ShowTootlip(self) -- 0.47 -- RECORDING MENU
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_ShowTootlip");
-    
 	GameTooltip:SetOwner(self);
 	local strToShow = "";
 	--if ( SpellTrackerDB.MenuDropDown_RECORDING.It1.check == true ) then strToShow = SpellTrackerDB.MenuDropDown_RECORDING.It1.txt;
@@ -2373,12 +2074,8 @@ function SpellTracker_RecordingDropDownMenu_ShowTootlip(self) -- 0.47 -- RECORDI
 	--end
 	GameTooltip:SetText(strToShow);
 	GameTooltip:Show();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_RecordingDropDownMenu_ShowTootlip");
 end
 function SpellTracker_SetViewPlayingMode(ViewPlaying) -- 0.47 -- active view playing configuration -- 0.62
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SetViewPlayingMode");
-	
     if ( ViewPlaying == 0 ) then -- 1 = recording / 0 = pause
 		SpellTrackerDB.ViewPlaying = 0;
 		SpellTrackerFrameMainMenuTitleViewPlayingBtnIcon:SetTexture("Interface\\TIMEMANAGER\\PauseButton");
@@ -2388,12 +2085,8 @@ function SpellTracker_SetViewPlayingMode(ViewPlaying) -- 0.47 -- active view pla
 	end
 	
 	SpellTracker:AdjustColorOfMainMenuTitle();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SetViewPlayingMode");
 end
 function SpellTracker_SetRecordingMode(Recording) -- 0.47 -- active recording configuration -- 0.62
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker_SetRecordingMode");
-	
     if ( Recording == 0 ) then -- 1 = recording / 0 = pause
 		SpellTrackerDB.Recording_Mode = 0;
 		SpellTrackerFrameMainMenuTitleRecordingBtnIcon:SetTexture("Interface\\TIMEMANAGER\\PauseButton");
@@ -2405,8 +2098,6 @@ function SpellTracker_SetRecordingMode(Recording) -- 0.47 -- active recording co
 	end
 	
 	SpellTracker:AdjustColorOfMainMenuTitle();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTracker_SetRecordingMode");
 end
 -- core --
 function SpellTracker:ResetView()
@@ -2519,8 +2210,6 @@ function SpellTracker:ChangeDataStruct(newStruct)  -- 0.54 ok DYNAMIC FILTER MEN
 	end
 end	
 function SpellTracker:StartFrameResize() -- 0.53 -- 0.57
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseDown");
-    
 	if ( SpellTracker:IsInCombat() == false ) then
 		SpellTrackerFrame.isMovingOrSizing = false;
 		local minHeight = SpellTrackerFrameMainMenuTitle:GetHeight() + SpellTrackerDB.Params.SpellBarHeight + 2;
@@ -2529,12 +2218,8 @@ function SpellTracker:StartFrameResize() -- 0.53 -- 0.57
 		SpellTrackerFrame:SetMaxResize(maxWidth, maxHeight);
 		SpellTrackerFrame:StartSizing();
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseDown");
 end
 function SpellTracker:EndFrameResize() -- 0.53 
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseUp");
-    
 	if ( SpellTracker:IsInCombat() == false ) then
 		SpellTracker:AutoRedimSpellTrackerFrame();
 		SpellTrackerFrame:StopMovingOrSizing();
@@ -2546,12 +2231,8 @@ function SpellTracker:EndFrameResize() -- 0.53
 		SpellTracker:ReComputeFilteredSpellList(); -- on recalcule
 		SpellTracker:UpdateFrame(); -- on update la frame
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "SpellTrackerResizeFrame_OnMouseUp");
 end
 function SpellTracker:ExpandForNodeType1(spellStruct) -- 0.48 Tree Node -- 0.53 bug fix -- 0.55 Node Type 1 = Simple Node
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ExpandForNodeType1");
-    
 	if ( spellStruct ) then
 		--print("Expand");
 		local localStruct = nil;
@@ -2568,12 +2249,8 @@ function SpellTracker:ExpandForNodeType1(spellStruct) -- 0.48 Tree Node -- 0.53 
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ExpandForNodeType1");
 end
 function SpellTracker:ExpandForNodeType2(spellStruct) -- 0.48 Tree Node -- 0.53 bug fix -- 0.55 Node Type 2 = Agregated Node
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ExpandForNodeType2");
-    
 	if ( spellStruct ) then
 		--print("Expand");
 		local localStruct = nil;
@@ -2590,12 +2267,8 @@ function SpellTracker:ExpandForNodeType2(spellStruct) -- 0.48 Tree Node -- 0.53 
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ExpandForNodeType2");
 end
 function SpellTracker:ExpandAll(spellStruct) -- 0.52 -- 0.53 bug fix -- 0.55 Node Type 2 = Agregated Node
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ExpandAll");
-    
 	function RecursExpand(struct)
 		if ( struct ) then
 			struct.Expanded = 1;
@@ -2622,12 +2295,8 @@ function SpellTracker:ExpandAll(spellStruct) -- 0.52 -- 0.53 bug fix -- 0.55 Nod
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ExpandAll");
 end
 function SpellTracker:Collapse(spellStruct) -- 0.48 Tree Node -- 0.55 Node Type 2 or 1
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "Collapse");
-    
 	if ( spellStruct ) then
 		--print("Collapse");
 		local localStruct = nil;
@@ -2642,12 +2311,8 @@ function SpellTracker:Collapse(spellStruct) -- 0.48 Tree Node -- 0.55 Node Type 
 			SpellTracker:UpdateFrame();
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "Collapse");
 end
 function SpellTracker:CollapseAll(spellStruct) -- 0.52 -- 0.55 Node Type 2 or 1
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CollapseAll");
-    
 	function RecursCollapse(struct)
 		if ( struct ) then
 			struct.Expanded = SpellTracker_Collapse;
@@ -2672,12 +2337,8 @@ function SpellTracker:CollapseAll(spellStruct) -- 0.52 -- 0.55 Node Type 2 or 1
 			SpellTracker:UpdateFrame();
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CollapseAll");
 end
 function SpellTracker:GetDBSpellsStructByParsingOfIndexer(IndexerString) -- 0.48 Tree Node
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "GetDBSpellsStructByParsingOfIndexer");
-    
 	--print(IndexerString);
 	local CurrentIndexerTab = SpellTracker:StringFiltering(IndexerString, "(.+)"..SpellTrackerDB.Separator.."(.+)");
 	local idx=0;
@@ -2690,14 +2351,9 @@ function SpellTracker:GetDBSpellsStructByParsingOfIndexer(IndexerString) -- 0.48
 			break;
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "GetDBSpellsStructByParsingOfIndexer"); 
-	
 	return tmpStruct;
 end
 function SpellTracker:GetFilteredSpellsStructByParsingOfIndexer(IndexerString)-- 0.58
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "GetFilteredSpellsStructByParsingOfIndexer");
-    
 	local CurrentIndexerTab = SpellTracker:StringFiltering(IndexerString, "(.+)"..SpellTrackerDB.Separator.."(.+)");
 	local tmpIndexer = "";
     local tmpStruct = SpellTrackerDB.FILTEREDSPELLS;
@@ -2714,14 +2370,10 @@ function SpellTracker:GetFilteredSpellsStructByParsingOfIndexer(IndexerString)--
     end
     
 	--print("URL( "..IndexerString.." ) = "..tostring(tmpStruct));
-    
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "GetFilteredSpellsStructByParsingOfIndexer"); 
 	
 	return tmpStruct;
 end
 function SpellTracker:CreateOrUpdateRaidMembersList()
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CreateOrUpdateRaidMembersList");
-    
 	local _guid;
 	SpellTracker.RaidLst = {};
 	SpellTracker.RaidLst[UnitGUID("player")]=1; -- je m'ajoute
@@ -2731,12 +2383,8 @@ function SpellTracker:CreateOrUpdateRaidMembersList()
 		_guid = UnitGUID("raidpet"..tostring(idx)); -- raid pet member
 		if ( _guid ) then SpellTracker.RaidLst[_guid] = 1; end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CreateOrUpdateRaidMembersList");
 end
 function SpellTracker:CreateOrUpdateGroupMembersList()
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CreateOrUpdateGroupMembersList");
-    
 	local _guid;
 	SpellTracker.PartyLst = {};
 	SpellTracker.PartyLst[UnitGUID("player")]=1; -- je m'ajoute
@@ -2746,12 +2394,8 @@ function SpellTracker:CreateOrUpdateGroupMembersList()
 		_guid = UnitGUID("partypet"..tostring(idx)); -- party pet member
 		if ( _guid ) then SpellTracker.PartyLst[_guid] = 1; end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CreateOrUpdateGroupMembersList");
 end
 function SpellTracker:InitDataStruct(dataStruct) -- 0.43 OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "InitDataStruct");
-    
 	local ret = false;
 	if ( dataStruct ) then
 		if ( type(dataStruct ) == "string" ) then
@@ -2762,14 +2406,9 @@ function SpellTracker:InitDataStruct(dataStruct) -- 0.43 OK
 			ret = true;
 		end
 	end
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "InitDataStruct"); 
-	
 	return ret;
 end
 function SpellTracker:InitDisplayedFilter(dispFilter) -- 0.43 OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "InitDisplayedFilter");
-    
 	local ret = false;
 	
 	if ( dispFilter ) then
@@ -2782,14 +2421,9 @@ function SpellTracker:InitDisplayedFilter(dispFilter) -- 0.43 OK
 			ret = true;
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "InitDisplayedFilter"); 
-	
 	return ret;
 end
 function SpellTracker:InitFilterFrame() -- 0.43 OK -- 0.54 bug fix ( btn.Used for compatibility with AutoResizeFilterFrame modify )
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "InitFilterFrame");
-    
 	if ( SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame ) then
 		if ( not SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame.Buttons ) then
 			local BtnName = "SpellTrackerFilterBtn";
@@ -2822,12 +2456,8 @@ function SpellTracker:InitFilterFrame() -- 0.43 OK -- 0.54 bug fix ( btn.Used fo
 			if ( btn ) then btn.last = true; end -- 0.51 pour pas afficher de fleche au dernier bouton 
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "InitFilterFrame");
 end
 function SpellTracker:AutoResizeFilterFrame() -- 0.43 OK  -- 0.54 modified for dynamique filter
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "AutoResizeFilterFrame");
-    
 	if ( SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame ) then
 		local FrameWidth = SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame:GetWidth();
 		if ( SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame.Buttons ) then
@@ -2848,29 +2478,20 @@ function SpellTracker:AutoResizeFilterFrame() -- 0.43 OK  -- 0.54 modified for d
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "AutoResizeFilterFrame");
 end
 function SpellTracker:ModifyBtnLabelAccordingToFinalWidth(btnLabel, finalWidth) -- 0.43 OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ModifyBtnLabelAccordingToFinalWidth");
-    
 	local name = btnLabel.nameStr;
 	local substring;
 	for length=#name, 1, -1 do
 		substring = SpellTracker:utf8sub(name, 1, length);
 		btnLabel:SetText(substring);
 		if ( btnLabel:GetStringWidth() <= finalWidth ) then
-			SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ModifyBtnLabelAccordingToFinalWidth");
 			return;
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ModifyBtnLabelAccordingToFinalWidth");
 end
 function SpellTracker:utf8sub(str, start, numChars) -- 0.43 OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "utf8sub");
-    
-	-- This function can SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "RecursPrint"); a substring of a UTF-8 string, properly
+	-- This function can be a substring of a UTF-8 string, properly
 	-- handling UTF-8 codepoints. Rather than taking a start index and
 	-- optionally an end index, it takes the string, the start index, and
 	-- the number of characters to select from the string.
@@ -2894,14 +2515,9 @@ function SpellTracker:utf8sub(str, start, numChars) -- 0.43 OK
 		end
 		numChars = numChars - 1
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "utf8sub"); 
-	
 	return str:sub(start, currentIndex - 1);
 end
-function SpellTracker:UpdateDisplayedFiterFromButtons() -- 0.43 simplification OK -- 0.42 -- met à jour SpellTrackerDB.Params.DisplayedFilters en fonction de l'état de selection des filtres -- 0.53 bug fix
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateDisplayedFiterFromButtons");
-    
+function SpellTracker:UpdateDisplayedFiterFromButtons() -- 0.43 simplification OK -- 0.42 -- met a jour SpellTrackerDB.Params.DisplayedFilters en fonction de l'etat de selection des filtres -- 0.53 bug fix
 	-- check les boutons de filtre et met à jour la string SpellTrackerDB.Params.DisplayedFilters qui sera utilisé pour afficher les infos des barres
 	local filterString = "";
 	local btns = SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame.Buttons;
@@ -2928,12 +2544,8 @@ function SpellTracker:UpdateDisplayedFiterFromButtons() -- 0.43 simplification O
 	end
 
 	SpellTracker:UpdateFrame();							
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateDisplayedFiterFromButtons");
 end
-function SpellTracker:old_DisplayedFiterButtonsToStringIndexer() -- 0.50 cree un indexer en fonction de l'état de selection des filtres
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "DisplayedFiterButtonsToStringIndexer");
-    
+function SpellTracker:old_DisplayedFiterButtonsToStringIndexer() -- 0.50 cree un indexer en fonction de l'etat de selection des filtres
 	-- check les boutons de filtre et met à jour la string SpellTrackerDB.Params.DisplayedFilters qui sera utilisé pour afficher les infos des barres
 	local filterString = "";
 	local btns = SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame.Buttons;
@@ -2949,23 +2561,14 @@ function SpellTracker:old_DisplayedFiterButtonsToStringIndexer() -- 0.50 cree un
 			end
 		end
 	end			
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "DisplayedFiterButtonsToStringIndexer");
-	
 	return filterString;
 end
-function SpellTracker:UpdateButtonsFromDisplayedFiter() -- 0.43 simplfication OK -- 0.42 -- met a jour l'état des boutons de sélection des filtres en fonction de SpellTrackerDB.Params.DisplayedFilters
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateButtonsFromDisplayedFiter");
-    
+function SpellTracker:UpdateButtonsFromDisplayedFiter() -- 0.43 simplfication OK -- 0.42 -- met a jour l'etat des boutons de selection des filtres en fonction de SpellTrackerDB.Params.DisplayedFilters
 	local count = #SpellTrackerDB.DisplayedFilters;
 	local btns = SpellTrackerFrameMainMenuTitleDisplayFilterSelectFrame.Buttons;
 	SpellTracker:UpdateFilterButton(btns[count]);			
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateButtonsFromDisplayedFiter");
 end
 function SpellTracker:UpdateFilterButton(btn) -- 0.43 OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateFilterButton");
-    
 	if ( btn ) then
 		if ( btn.selected == false ) then -- alors on selction tout les boutons qui sont avant et on deseltionne ceux qui sont apres
 			self.selected = true;
@@ -3008,12 +2611,8 @@ function SpellTracker:UpdateFilterButton(btn) -- 0.43 OK
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateFilterButton");
 end
 function SpellTracker:CalcEventsPerSec(refresh) -- calcul le nombre de tick de spell track log par second
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CalcEventsPerSec");
-    
 	if ( refresh == nil or refresh == false ) then
 		local tickTime = math.floor(GetTime());
 		if ( tickTime == SpellTracker.EventPerSec_LastTickTime ) then -- tick ++
@@ -3038,12 +2637,8 @@ function SpellTracker:CalcEventsPerSec(refresh) -- calcul le nombre de tick de s
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CalcEventsPerSec");
 end
 function SpellTracker:AdjustColorOfSpellTrackerMinimapButton()
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "AdjustColorOfSpellTrackerMinimapButton");
-    
 	if ( SpellTracker.EventPerSec_Ticks > 10 ) then -- Orange
 		SpellTrackerMinimapButton.background:SetVertexColor(0.5,0.5,0,1);
 		SpellTrackerMinimapButton.highlight:SetVertexColor(0.5,0.5,0,1);
@@ -3065,8 +2660,6 @@ function SpellTracker:AdjustColorOfSpellTrackerMinimapButton()
 		SpellTrackerMinimapButton.background:SetVertexColor(0,1,0,1);
 		SpellTrackerMinimapButton.highlight:SetVertexColor(0,1,0,1);
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "AdjustColorOfSpellTrackerMinimapButton");
 end
 function SpellTracker:AdjustColorOfMainMenuTitle()
 	-- bg tex color -- vert quand ca enregiste / rouge quand ca enregistre pas / orange quand la vue est en pause
@@ -3092,8 +2685,6 @@ function SpellTracker:AdjustViewPauseRecordingMode()
 	end 
 end
 function SpellTracker:AutoRedimSpellTrackerFrame(CountDisplayedBar)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "AutoRedimSpellTrackerFrame");
-    
 	SpellTrackerFrame.isMovingOrSizing = false;
 	SpellTrackerFrame:StartSizing();
 	-- on reajuste la valuer y a un mulitple de Hbarre + offsety
@@ -3113,12 +2704,8 @@ function SpellTracker:AutoRedimSpellTrackerFrame(CountDisplayedBar)
 	
 	-- redim buttons on FilterFrame
 	SpellTracker:AutoResizeFilterFrame();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "AutoRedimSpellTrackerFrame");
 end
 function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about overlappiung of bar ( first white bar )
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CreateBar");
-    
 	local mFrameContainerLevel = SpellTrackerFrameContainer:GetFrameLevel();
 	
 	local GuiBar = CreateFrame("Button", frmName, SpellTrackerFrame, "SpellTrackerBarTemplate");
@@ -3203,13 +2790,9 @@ function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about 
 	GuiBar:SetBackdropColor(0.1, 0.1, 0.1, 0.9);
     GuiBar:SetBackdropBorderColor(0, 0, 0, 0);
 	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CreateBar"); 
-	
 	return GuiBar;
 end
 function SpellTracker:ResetBar(GuiBar) -- 0.48 TreeIcon
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ResetBar");
-    
 	if ( GuiBar ) then
 		GuiBar.GUI.SpellIconBtn.SpellId = nil;
 		
@@ -3231,12 +2814,8 @@ function SpellTracker:ResetBar(GuiBar) -- 0.48 TreeIcon
 		GuiBar.VAR.Used = false;
 		GuiBar.VAR.IndexerOfParent = nil;
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ResetBar");
 end
 function SpellTracker:InitFrame()
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "InitFrame");
-    
 	local mFrameContainer = SpellTrackerFrameContainer;
 	SpellTracker.CountBarDisplayed = math.floor(mFrameContainer:GetHeight() / (SpellTrackerDB.Params.SpellBarHeight + 2));
 	SpellTracker:AutoRedimSpellTrackerFrame(SpellTracker.CountBarDisplayed);
@@ -3301,19 +2880,12 @@ function SpellTracker:InitFrame()
 	SpellTracker:InitFilterFrame();
 	SpellTracker:AutoResizeFilterFrame();
 	SpellTracker:UpdateButtonsFromDisplayedFiter();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "InitFrame");
 end
 function SpellTracker:CopyVar(varToCopy) -- quand je fait var2 = var1 les adresse des sous-object restent identique donc var1.toto = var2.toto
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "CopyVar");
-    
 	local copiedVar = {};
     for k,v in pairs(varToCopy) do
         copiedVar[k] = v;
     end
-
-    SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "CopyVar"); 
-	
 	return copiedVar;
 end
 function SpellTracker:UpdateFilteredStructureAccordingToFilters() -- 0.57
@@ -3453,8 +3025,6 @@ function SpellTracker:RecursExploringOfStructureAccordingToFilters(key, struct, 
     end
 end
 function SpellTracker:RecursExploreNodesToSortNodes(StructNodes)
-    SpellTracker:PPush(false);
-	
 	for k, v in pairs(StructNodes) do
 		if ( type(v) == "table" ) then
             local localStruct = SpellTracker:CopyVar(v);
@@ -3470,21 +3040,13 @@ function SpellTracker:RecursExploreNodesToSortNodes(StructNodes)
 		end
 	end
     --table.sort(SpellTrackerDB.NodesToSort[spellStruct.Indexer], SortSpellList);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "RecursExploreNodesToSortNodes");
 end
 function SpellTracker:ReComputeFilteredSpellList() -- recree la liste a afficher en fonction des filtre -- 0.47 ( calcul du temps d'execution de cette func ) -- 0.48 / Tree Node
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ReComputeFilteredSpellList");
-    
 	SpellTracker:UpdateFilteredStructureAccordingToFilters(); -- rempli SpellTrackerDB.FILTEREDSPELLS
 	
 	SpellTracker:FillListToSortAndNodeToSortFromColumnFilter();
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ReComputeFilteredSpellList");
 end
 function SpellTracker:FillListToSortAndNodeToSortFromColumnFilter(ReComputeFiltering) -- recree la liste a afficher en fonction des filtre -- 0.47 ( calcul du temps d'execution de cette func ) -- 0.48 / Tree Node -- 0.72 bug fix on string.match( cCFilterString, spellStruct[v] )
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "FillListToSortAndNodeToSortFromColumnFilter");
-    
 	local cCFilterString = "";
 	
 	SpellTracker.SpellListToSort = {};
@@ -3546,8 +3108,6 @@ function SpellTracker:FillListToSortAndNodeToSortFromColumnFilter(ReComputeFilte
 	
     --print("#SpellTracker.SpellListToSort = "..tostring(#SpellTracker.SpellListToSort));
 	table.sort(SpellTracker.SpellListToSort, SortSpellList);
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "FillListToSortAndNodeToSortFromColumnFilter");
 end
 function SpellTracker:RepeatString(s, n) -- 0.60 ( level delay )
 	return n > 0 and s .. SpellTracker:RepeatString(s, n-1) or "" 
@@ -3596,8 +3156,6 @@ function SpellTracker:RefreshView()
 	SpellTrackerButton_UpdateTitle();
 end
 function SpellTracker:UpdateFrame() -- 0.41 / affiche simplement mais ne recalcule aucune liste -- 0.48 Tree Node -- 0.49 Tree Node -- 0.50
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateFrame");
-    			
 	for i, bar in pairs(SpellTracker.BARS) do
 		if ( bar ) then
 			if ( bar.VAR.Used ) then -- la barre est utlisée;
@@ -3660,12 +3218,8 @@ function SpellTracker:UpdateFrame() -- 0.41 / affiche simplement mais ne recalcu
 		end
 	end
 	SpellTracker.CountBarToDisplay = Count_Position;--#SpellTracker.SpellListToSort + CountAllChilds; -- 0.48 // ajout de CountAllChilds pour SpellTrackerFrameContainerVirtualScrollBar_OnMouseWheel et donc la gestion de la virtualmousewheel
-    
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateFrame");
 end
 function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position, ChildListToSort_Position, CountChild) -- 0.48 -- 0.55 type nodes -- 0.73 harmonisation des infos et display bug fix
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateGuiBar");
-    
 	if ( GuiBar and spellStruct ) then
 		if ( spellStruct.Expanded and spellStruct.Expanded > 0 ) then -- 0.48 / Tree Icon -- 0.55 was == true instead of > 0
 			GuiBar.GUI.TreeIcon:SetTexture("Interface\\Buttons\\Arrow-Down-Up"); -- Tree Icon
@@ -3708,7 +3262,6 @@ function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position
 		local SpellName  = "";
 		local SpellId = "";
 		if ( spellStruct.SpellName ) then
-			--print(spellStruct.SpellIconTex);
 			GuiBar.GUI.SpellIcon:SetTexture(spellStruct.SpellIconTex); -- Spell Icon
 			SpellName = spellStruct.SpellName;
 			SpellId = spellStruct.SpellId;
@@ -3812,7 +3365,7 @@ function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position
 		local baseLvl = #SpellTrackerDB.DisplayedFilters;
 		local diffLvl = spellStruct.Level - (baseLvl+1);
 		if ( ChildListToSort_Position and CountChild ) then
-			local spacer = SpellTracker:RepeatString(" ", diffLvl);
+			local spacer = SpellTracker:RepeatString("  ", diffLvl);
 			if ( ChildListToSort_Position == CountChild ) then
 				TreeSymbolLabel = spacer..LastNode;
 				SpellNameLabel = SpellNameLabel..spacer.."   ";
@@ -3977,8 +3530,6 @@ function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position
 		
 		GuiBar.VAR.Used = true;
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateGuiBar");
 end
 function SpellTracker:DisplayLineOnBarsFromBuffer(GuiBar, buffer) -- show amount bars -- 0.66
 -- AMMOUNT LINE
@@ -4072,19 +3623,13 @@ function SpellTracker:GetInfosFromStructOrParentStruct(itemStr, struct, structPa
     return item;
 end
 function SpellTracker:StartFight() -- 0.47 regen disabled so fight starting
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "StartFight");
-    
 	SpellTracker:EndFrameResize(); -- 0.53 on met fin a une eventuelle action de redimentionnement pour eviter le blocage de la manip a la souris sur toute l'interface (CRITIC CAT1)
 	
 	SpellTrackerDB.LastViewPlayingValue = SpellTrackerDB.ViewPlaying;
 	SpellTrackerDB.ViewPlaying = 0; -- when frame is visible view updating paused
 	SpellTracker_SetViewPlayingMode(SpellTrackerDB.ViewPlaying);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "StartFight");
 end
 function SpellTracker:EndFight() -- 0.47 regen enabled so fight ending
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "EndFight");
-    
 	SpellTrackerDB.ViewPlaying = SpellTrackerDB.LastViewPlayingValue;
 	SpellTracker_SetViewPlayingMode(SpellTrackerDB.ViewPlaying);
 	if ( SpellTrackerFrame ) then
@@ -4093,12 +3638,9 @@ function SpellTracker:EndFight() -- 0.47 regen enabled so fight ending
 			SpellTracker:UpdateFrame();
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "EndFight");
 end
-function SpellTracker:StringFiltering(strToFilter, pattern) -- 0.41 / pour separer les valeur du style : HitType > SpellName > SourceType > SourceReaction en list indéxé par int
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "StringFiltering");
-    local ret = {};
+function SpellTracker:StringFiltering(strToFilter, pattern) -- 0.41 / pour separer les valeur du style : HitType > SpellName > SourceType > SourceReaction en list indexe par int
+	local ret = {};
 	
 	if ( strToFilter and pattern ) then
 		local lst = {};
@@ -4117,14 +3659,9 @@ function SpellTracker:StringFiltering(strToFilter, pattern) -- 0.41 / pour separ
 	else
 		print("ERROR : SpellTracker StringFilteringInv string args == nil");
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "StringFiltering"); 
-	
 	return ret;
 end
-function SpellTracker:StringFilteringInv(strToFilter, pattern) -- 0.41 / pour separer les valeur du style : HitType > SpellName > SourceType > SourceReaction en list indéxée par nom
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "StringFilteringInv");
-    
+function SpellTracker:StringFilteringInv(strToFilter, pattern) -- 0.41 / pour separer les valeur du style : HitType > SpellName > SourceType > SourceReaction en list indexe par nom
 	local lst = {};
 	
 	if ( strToFilter and pattern) then
@@ -4144,16 +3681,11 @@ function SpellTracker:StringFilteringInv(strToFilter, pattern) -- 0.41 / pour se
 	else
 		print("ERROR : SpellTracker StringFilteringInv string args == nil");
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "StringFilteringInv"); 
-	
 	return lst;
 end
 function SpellTracker:WhatIsThisFlag(flag)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "WhatIsThisFlag");
-    
-	if ( flag == nil )  then SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "WhatIsThisFlag"); return; end
-	if ( flag == 0 )  then SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "WhatIsThisFlag"); return; end
+	if ( flag == nil )  then return; end
+	if ( flag == 0 )  then return; end
 	
     -- on sort quatre infos utile : TYPE CONTROL REACTION AFFILIATION
 	local flagType, flagControl, flagReaction, flagAffiliation;
@@ -4175,46 +3707,27 @@ function SpellTracker:WhatIsThisFlag(flag)
 	if ( bit.band(flag, 0x00000004) > 0 ) then flagAffiliation = SpellTracker.CombatFlags[0x00000004]; end -- AFFILIATION_RAID
 	if ( bit.band(flag, 0x00000002) > 0 ) then flagAffiliation = SpellTracker.CombatFlags[0x00000002]; end -- AFFILIATION_PARTY
 	if ( bit.band(flag, 0x00000001) > 0 ) then flagAffiliation = SpellTracker.CombatFlags[0x00000001]; end -- AFFILIATION_MINE
-    
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "WhatIsThisFlag");
-	
+
     return flagType, flagControl, flagReaction, flagAffiliation;
 end
 function SpellTracker:WhatIsThisGuid(GUIDNumber) -- 0.74 +> change for 6.0.2
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "WhatIsThisGuid");
-    
 	local ret = "Unknow";
-	
-	--if ( SpellTracker.Build <= 50400 ) then
-	--	if ( GUIDNumber and GUIDNumber ~= "" ) then
-	--		local maskedB = tonumber(GUIDNumber:sub(5,5), 16) % 8; 
-	--		local knownTypes = {[0]="player", [1]="object", [3]="mob", [4]="pet", [5]="vehicle"};
-	--		local result = knownTypes[maskedB] or "Unknow";
-	--		ret = result; 
-	--	end
-	--else
-		if ( GUIDNumber and GUIDNumber ~= "" ) then
-			if ( string.find(tostring(GUIDNumber), "Player") ~= nil ) then -- "Creature", "Pet", "GameObject", and "Vehicle"
-				ret = "player";
-			elseif ( string.find(tostring(GUIDNumber), "Creature") ~= nil ) then
-				ret = "mob";
-			elseif ( string.find(tostring(GUIDNumber), "Pet") ~= nil ) then
-				ret = "Pet";
-			elseif ( string.find(tostring(GUIDNumber), "GameObject") ~= nil ) then
-				ret = "object";
-			elseif ( string.find(tostring(GUIDNumber), "Vehicle") ~= nil ) then
-				ret = "vehicle";
-			end
+	if ( GUIDNumber and GUIDNumber ~= "" ) then
+		if ( string.find(tostring(GUIDNumber), "Player") ~= nil ) then -- "Creature", "Pet", "GameObject", and "Vehicle"
+			ret = "player";
+		elseif ( string.find(tostring(GUIDNumber), "Creature") ~= nil ) then
+			ret = "mob";
+		elseif ( string.find(tostring(GUIDNumber), "Pet") ~= nil ) then
+			ret = "Pet";
+		elseif ( string.find(tostring(GUIDNumber), "GameObject") ~= nil ) then
+			ret = "object";
+		elseif ( string.find(tostring(GUIDNumber), "Vehicle") ~= nil ) then
+			ret = "vehicle";
 		end
-	--end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "WhatIsThisGuid"); 
-	
+	end
 	return ret;
 end
 function SpellTracker:COMBAT_LOG_EVENT_UNFILTERED(_,DATETIME, EVENTTYPE, hideCaster, GUIDSRC, SRC, SRCFLAG1, SRCFLAG2, GUIDDST, DST, DSTFLAG1, DSTFLAG2, ...)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "COMBAT_LOG_EVENT_UNFILTERED");
-    
 	local TargetType, GUID = nil, TargetName, SourceName, SourceType, SourceClass, TargetClass;
 	
 	local ret = nil;
@@ -4227,7 +3740,6 @@ function SpellTracker:COMBAT_LOG_EVENT_UNFILTERED(_,DATETIME, EVENTTYPE, hideCas
 			RaidTrackingContinue = true;
 		end
 		if ( RaidTrackingContinue == false ) then
-			SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "COMBAT_LOG_EVENT_UNFILTERED");
 			return nil;
 		end
 	end
@@ -4239,7 +3751,6 @@ function SpellTracker:COMBAT_LOG_EVENT_UNFILTERED(_,DATETIME, EVENTTYPE, hideCas
 			PartyTrackingContinue = true;
 		end
 		if ( PartyTrackingContinue == false ) then
-			SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "COMBAT_LOG_EVENT_UNFILTERED");
 			return nil;
 		end
 	end
@@ -4279,12 +3790,8 @@ function SpellTracker:COMBAT_LOG_EVENT_UNFILTERED(_,DATETIME, EVENTTYPE, hideCas
 			SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetClass, TargetType, TargetName, struct);
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "COMBAT_LOG_EVENT_UNFILTERED");
 end
 function SpellTracker:ReFormatEvent(DATETIME, EVENTTYPE, hideCaster, GUIDSRC, SRC, SRCFLAG1, SRCFLAG2, GUIDDST, DST, DSTFLAG1, DSTFLAG2, ...)
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "ReFormatEvent");
-    
 	local Struct = nil;
 	if ( EVENTTYPE == "SPELL_DAMAGE" ) then -- domage de sort
 		Struct = {};
@@ -4329,23 +3836,23 @@ function SpellTracker:ReFormatEvent(DATETIME, EVENTTYPE, hideCaster, GUIDSRC, SR
 		Struct.EVENTTYPE = EVENTTYPE;
 		Struct.HITTYPE = "HEAL";
 		Struct.TYPE = "HEAL SPELL TICK";
-	elseif ( EVENTTYPE == "SPELL_MISSED" ) then -- Sort Manqué ou partiellement manqué
+	elseif ( EVENTTYPE == "SPELL_MISSED" ) then -- Sort Manque ou partiellement manque
 		Struct = {};
 		Struct.SPELLID, Struct.SPELLNAME, Struct.SPELLSCHOOL, 
-		Struct.MISSEDTYPE, Struct.AMOUNT = ...; -- AMOUNT => montant du sort qui est absorbé
+		Struct.MISSEDTYPE, Struct.ISOFFHAND, Struct.MULTISTRIKE, Struct.AMOUNT = ...; -- ISOFFHAND & MULTISTRIKE sont des bool / AMOUNT => montant du sort qui est absorbe
 		Struct.EVENTTYPE = EVENTTYPE;
 		Struct.HITTYPE = "MISSED";
 		Struct.TYPE = "MISSED SPELL";
-	elseif ( EVENTTYPE == "SPELL_PERIODIC_MISSED" ) then -- Tick de Sort Manqué ou partiellement manqué
+	elseif ( EVENTTYPE == "SPELL_PERIODIC_MISSED" ) then -- Tick de Sort Manque ou partiellement manque
 		Struct = {};
 		Struct.SPELLID, Struct.SPELLNAME, Struct.SPELLSCHOOL, 
-		Struct.MISSEDTYPE, Struct.AMOUNT = ...; -- AMOUNT => montant du sort qui est absorbé
+		Struct.MISSEDTYPE, Struct.ISOFFHAND, Struct.MULTISTRIKE, Struct.AMOUNT = ...; -- ISOFFHAND & MULTISTRIKE sont des bool / AMOUNT => montant du sort qui est absorbe
 		Struct.EVENTTYPE = EVENTTYPE;
 		Struct.HITTYPE = "MISSED";
 		Struct.TYPE = "MISSED SPELL TICK";
-	elseif ( EVENTTYPE == "SWING_MISSED" ) then -- coup blanc maqnué
+	elseif ( EVENTTYPE == "SWING_MISSED" ) then -- coup blanc maqnue
 		Struct = {};
-		Struct.MISSEDTYPE, Struct.AMOUNT = ...; -- AMOUNT => montant du sort qui est absorbé
+		Struct.MISSEDTYPE, Struct.ISOFFHAND, Struct.MULTISTRIKE, Struct.AMOUNT = ...; -- ISOFFHAND & MULTISTRIKE sont des bool / AMOUNT => montant du sort qui est absorb
 		Struct.EVENTTYPE = EVENTTYPE;
 		Struct.SPELLNAME = "COUP BLANC";
 		Struct.HITTYPE = "MISSED";
@@ -4355,14 +3862,9 @@ function SpellTracker:ReFormatEvent(DATETIME, EVENTTYPE, hideCaster, GUIDSRC, SR
 		Struct.SRCFLAG1 = SRCFLAG1;
 		Struct.DSTFLAG1 = DSTFLAG1;
 	end
-
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "ReFormatEvent"); 
-	
 	return Struct;
 end
 function SpellTracker:GetAllSpellTexture(spellID) -- 0.40 / pour remplacer
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "GetAllSpellTexture");
-    
 	local ret = nil;
 	if ( spellID ) then
 		if ( SpellTrackerDB.Dicos.Icons[spellID] == nil ) then
@@ -4371,25 +3873,14 @@ function SpellTracker:GetAllSpellTexture(spellID) -- 0.40 / pour remplacer
 		end
 		ret = SpellTrackerDB.Dicos.Icons[spellID];
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "GetAllSpellTexture");
-	
 	return ret;
 end
 function SpellTracker:GetSpellHyperlink(spellID) -- 0.41 / OK
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "GetSpellHyperlink");
-    
 	local name, rank = GetSpellInfo(spellID);
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "GetSpellHyperlink");
-	
 	rank = rank or "";
-	
 	return "|Hspell:" .. spellID .."|h|r|cff71d5ff[" .. name .. " " .. rank .. "]|r|h";
 end
 function SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetClass, TargetType, TargetName, CombatLogStruct) -- TargetType = player or MOB / -- 0.54 simplification lol tout les nom vont dans updatespell ^^
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "UpdateSpell");
-    
 	-- voir http://www.wowwiki.com/API_COMBAT_LOG_EVENT
 	local SpellIndexer;
 	local SpellStruct = SpellTrackerDB.SPELLS;
@@ -4428,7 +3919,7 @@ function SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetCla
 			currentKey = tostring(SourceType);
 			currentIT = it;
 			SpellStruct = SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, currentKey, currentIT, CombatLogStruct);
-		elseif ( it == "SourceReaction" ) then -- réaction de la source par rapport a mon perso
+		elseif ( it == "SourceReaction" ) then -- reaction de la source par rapport a mon perso
 			currentKey = tostring(flagReactionSrc);
 			currentIT = it;
 			SpellStruct = SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, currentKey, currentIT, CombatLogStruct);
@@ -4440,7 +3931,7 @@ function SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetCla
 			currentKey = tostring(TargetType);
 			currentIT = it;
 			SpellStruct = SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, currentKey, currentIT, CombatLogStruct);
-		elseif ( it == "TargetReaction" ) then -- réaction de la cible par rapport a mon perso
+		elseif ( it == "TargetReaction" ) then -- reaction de la cible par rapport a mon perso
 			currentKey = tostring(flagReactionDst);
 			currentIT = it;
 			SpellStruct = SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, currentKey, currentIT, CombatLogStruct);
@@ -4451,7 +3942,7 @@ function SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetCla
 		end
 	end
 	
-	if ( SpellStruct ) then -- on ajoute à la BD
+	if ( SpellStruct ) then -- on ajoute a la BD
 		-- On maj la frame / 0.40 ralentissait toute l'interface lors des raids capitale
 		if ( SpellTrackerFrame ) then
 			if ( SpellTrackerFrame:IsVisible() ) then
@@ -4466,12 +3957,8 @@ function SpellTracker:UpdateSpell(SourceClass, SourceType, SourceName, TargetCla
 			end
 		end
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "UpdateSpell");
 end
 function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, currentKey, currentIT, CombatLogStruct) -- 0.41 / OK -- 0.66 refonte pour le sort
-	SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "AddOrUpdateSpellsAmountsAndTicksStruct");
-    
 	local ret = nil;
 	
 	local currentStruct = SpellStruct[currentKey];
@@ -4509,7 +3996,7 @@ function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, curren
 	
 	if ( CombatLogStruct.OVERKILL < 0 ) then CombatLogStruct.OVERKILL = 0; end
 	
-	-- affectation des données selon le log de combat
+	-- affectation des donnees selon le log de combat
 	local TotalAmount = 0;
 	local TotalTick = 0;
 	local TotalBest = 0;
@@ -4553,7 +4040,7 @@ function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, curren
 		end
 	end
 	
-	-- On recup les données actuelle / 0.40
+	-- On recup les donnees actuelle / 0.40
 	local LocalStruct = {};
 	_,--total
 		LocalStruct.SpellHitAmount, LocalStruct.SpellCritAmount, 
@@ -4608,7 +4095,7 @@ function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, curren
 		SpellCritAmount + SpellCritAndOverAmount + SpellCritAndAbsorbAmount + -- crit
 		SpellHitAmount + SpellOverAmount + SpellAbsorbAmount; -- hit
 		
-	if ( CurrentSpellTotalAmount > 0 ) then -- on ajoute à la BD
+	if ( CurrentSpellTotalAmount > 0 ) then -- on ajoute a la BD
 		-- Montants
 		LocalStruct.SpellHitAmount = (LocalStruct.SpellHitAmount) + SpellHitAmount;
 		LocalStruct.SpellCritAmount = (LocalStruct.SpellCritAmount) + SpellCritAmount;
@@ -4638,7 +4125,7 @@ function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, curren
 		if ( SpellOverAndAbsorbAmount > 0 ) then LocalStruct.CountSpellOverAndAbsorb = LocalStruct.CountSpellOverAndAbsorb + 1; end
 		if ( SpellAbsorbAmount > 0 ) then LocalStruct.CountSpellAbsorb = LocalStruct.CountSpellAbsorb + 1; end
 		
-		-- On retransforme les données en deux lignes / 0.40
+		-- On retransforme les donnees en deux lignes / 0.40
 		currentStruct.AmountLine = TotalAmount.."/"..
 			LocalStruct.SpellHitAmount.."/"..
 			LocalStruct.SpellCritAmount.."/"..LocalStruct.SpellCritAndOverAmount.."/"..
@@ -4665,110 +4152,9 @@ function SpellTracker:AddOrUpdateSpellsAmountsAndTicksStruct(SpellStruct, curren
 		
 		ret = currentStruct;
 	end
-	
-	SpellTracker:ProfilingUseFuncEnd(SpellTrackerDB, "AddOrUpdateSpellsAmountsAndTicksStruct");
-	
 	return	ret;
 end
--- START PROFILING --
-function SpellTracker:ProfilingRecordFuncs(struct, structOfFuncs, erase) -- record all func in struct for profiling
-    if ( struct and structOfFuncs ) then
-        if ( erase == true ) then struct.Profiling = {};
-        else struct.Profiling = struct.Profiling or {}; end
-		for i, v in pairs(structOfFuncs) do
-            if( type(v) == "function" ) then
-                local indexer = tostring(i);
-                print("Profiling of "..indexer.." Started = OK");
-                struct.Profiling[indexer] = {};
-                struct.Profiling[indexer].CountCall = 0;
-                struct.Profiling[indexer].MinTime = 1000000;
-                struct.Profiling[indexer].MaxTime = 0;
-                struct.Profiling[indexer].SumTime = 0;
-                struct.Profiling[indexer].MeanTime = 0;
-                struct.Profiling[indexer].CountCallByDebugLib = 0;
-            end
-        end
-        struct.Profiling.TotalTime = 0;
-    end
-end
-function SpellTracker:ProfilingUseFuncStart(struct, funcStr) -- record func and init timer func exec
-    if ( funcStr and struct ) then
-		--print("funcStr and struct");
-		if ( struct.Profiling ) then
-			--print("struct.Profiling");
-			if ( struct.Profiling[funcStr] ) then
-				--print("struct.Profiling[funcStr]");
-				SpellTracker:PPush(true)
-			end
-		end
-	else
-		--print("struct="..tostring(struct));
-    	--print("funcStr="..tostring(funcStr));
-    end
-end
-function SpellTracker:ProfilingUseFuncEnd(struct, funcStr) -- end and log timer func exec
-    if ( funcStr and struct ) then
-        if ( struct.Profiling ) then
-			if ( struct.Profiling[funcStr] ) then
-				struct.Profiling[funcStr].CountCall = struct.Profiling[funcStr].CountCall + 1;
-				local time = 0;
-				if ( IsMacClient() ) then time = SpellTracker:PPop();
-				else time = SpellTracker:PPop() / 1000;
-				end
-				if ( time < struct.Profiling[funcStr].MinTime ) then struct.Profiling[funcStr].MinTime = time; end
-				if ( time > struct.Profiling[funcStr].MaxTime ) then struct.Profiling[funcStr].MaxTime = time; end
-				struct.Profiling[funcStr].SumTime = struct.Profiling[funcStr].SumTime + time;
-				struct.Profiling[funcStr].MeanTime = struct.Profiling[funcStr].SumTime / struct.Profiling[funcStr].CountCall;
-				struct.Profiling.TotalTime = struct.Profiling.TotalTime + time;
-			end
-		end
-	else
-		--print(tostring(funcStr));
-    end
-end
-function SpellTracker:ProfilingReport(struct)
-    --debug.sethook(); -- stop profiling
-    print("----------- START PROFILING REPORTING ----------");
-    for i,v in pairs(struct.Profiling) do
-        if ( type(v) == "table" ) then
-            print(tostring(i)..".CountCall (normal/debug) = "..tostring(v.CountCall).."/"..tostring(v.CountCallByDebugLib));
-            --print(tostring(i)..".Min/Max/Mean/Sum Time = "..tostring(v.MinTime).."/"..tostring(v.MaxTime).."/"..tostring(v.MeanTime).."/"..tostring(v.SumTime));
-            print(tostring(i)..".Total Time = "..tostring(v.SumTime));
-        end
-    end
-    print("Total Time = ", struct.Profiling.TotalTime, " s");
-    print("----------- END PROFILING REPORTING ----------");
-end
-function SpellTracker:PPush(reset) -- ok
-	if ( reset == true ) then
-		SpellTracker.tmpProfiling = {};
-		SpellTracker.tmpProfiling.last = 0;
-		SpellTracker.tmpProfiling.Started = true;
-		--print("tmpProfiling Intialised");
-		debugprofilestart();
-	end
-	if ( SpellTracker.tmpProfiling ) then
-		if ( SpellTracker.tmpProfiling.Started ) then 
-			SpellTracker.tmpProfiling.last = SpellTracker.tmpProfiling.last + 1;
-			SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last] = debugprofilestop();
-		end
-	end
-end
-function SpellTracker:PPop() -- ok
-    if ( SpellTracker.tmpProfiling ) then
-		SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last] = (SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last] or 0) + debugprofilestop();
-		SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last-1] = (SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last-1] or 0) + SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last]; 
-		SpellTracker.tmpProfiling.last = SpellTracker.tmpProfiling.last - 1;
-		debugprofilestart();
-		return SpellTracker.tmpProfiling[SpellTracker.tmpProfiling.last];
-	else
-		return 0;
-	end
-end
--- END PROFILING --
 function SpellTracker:RecursPrint(key, element)
-    SpellTracker:ProfilingUseFuncStart(SpellTrackerDB, "SpellTracker:RecursPrint");
-    
     print(key.." = {};");
     if ( element ) then
         for i,v in pairs(element) do 
@@ -4786,153 +4172,4 @@ function SpellTracker:RecursPrint(key, element)
             end
         end
     end
-    
-    SpellTracker:ProfilingUseFuncEnd(SpellTracker, "SpellTracker:RecursPrint");
 end
--- COMBAT_LOG_EVENT_UNFILTERED => Extracted form www.WowWiki.com/API_COMBAT_LOG_EVENT
---[[
-1st Param 	2nd Param 	3rd Param 	4th Param 	5th Param 	6th Param 	7th Param 		8th Param 	9th Param 	10th Param 	11th Param
-timestamp 	event 		hideCaster 	sourceGUID 	sourceName 	sourceFlags sourceFlags2 	destGUID 	destName 	destFlags 	destFlags2
-
-prefix 			1st Parameter (12th) 	2nd Paramater (13th) 	3rd Parameter (14th)
-SWING
-RANGE 			spellId 				spellName 				spellSchool
-SPELL 			spellId 				spellName 				spellSchool
-SPELL_PERIODIC 	spellId 				spellName 				spellSchool
-SPELL_BUILDING 	spellId 				spellName 				spellSchool
-ENVIRONMENTAL 	environmentalType
-
-Suffix 				1st Param (15th)	2nd Param (16th)	3rd Param (17th)	4th Param (18th)	5th Param (19th)	6th Param (20th)	7th Param (21th)	8th Param (22th)	9th Param (23th)
-_DAMAGE 			amount 				overkill 			school 				resisted 			blocked 			absorbed 			critical (1 or nil) glancing (1 or nil) crushing (1 or nil)
-_MISSED 			missType			isOffHand 			amountMissed*
-_HEAL 				amount 				overhealing 		absorbed 			critical
-_ENERGIZE 			amount 				powerType
-_DRAIN 				amount 				powerType 			extraAmount
-_LEECH 				amount 				powerType 			extraAmount
-_INTERRUPT 			extraSpellID 		extraSpellName 		extraSchool
-_DISPEL 			extraSpellID 		extraSpellName 		extraSchool 		auraType
-_DISPEL_FAILED 		extraSpellID 		extraSpellName 		extraSchool
-_STOLEN 			extraSpellID 		extraSpellName 		extraSchool 		auraType
-_EXTRA_ATTACKS 		amount
-_AURA_APPLIED 		auraType
-_AURA_REMOVED 		auraType
-_AURA_APPLIED_DOSE 	auraType 			amount
-_AURA_REMOVED_DOSE 	auraType 			amount
-_AURA_REFRESH 		auraType
-_AURA_BROKEN 		auraType
-_AURA_BROKEN_SPELL 	extraSpellID 		extraSpellName 		extraSchool 		auraType
-_CAST_START
-_CAST_SUCCESS
-_CAST_FAILED 		failedType
-_INSTAKILL
-_DURABILITY_DAMAGE
-_DURABILITY_DAMAGE_ALL
-_CREATE
-_SUMMON
-_RESURRECT
-
-Event 					Prefix to use 		Suffix to use
-DAMAGE_SHIELD 			SPELL 				_DAMAGE
-DAMAGE_SPLIT 			SPELL 				_DAMAGE
-DAMAGE_SHIELD_MISSED 	SPELL 				_MISSED
-
-Event 				1st Param 	2nd Param 	3rd Param
-ENCHANT_APPLIED 	spellName 	itemID 		itemName
-ENCHANT_REMOVED 	spellName 	itemID 		itemName
-PARTY_KILL
-UNIT_DIED
-UNIT_DESTROYED
-
-Event Prefix Description
-SPELL_
-Spell is the prefix for most effects even if the spell is a DoT or channeled. IE when the spell begins to be cast, SPELL_CAST_START is
-fired and not SPELL_PERIODIC_CAST_START. This is the same with _MISS, _FAILED, etc.
-
-SPELL_PERIODIC
-Spell_PERIODIC Only the effects that are periodic start with this PREFIX. IE: Successfully casting a DoT only happens once therefor
-even though the spell is periodic use the SPELL_ prefix. However, the damage is periodic so it will start with SPELL_PERIODIC_. 90%
-of the time you will only care about _DAMAGE or _HEAL.
-SPELL_BUILDING SPELL_BUILDING New in WotLK, assumed to be damage that can affect destructable buildings.
-ENVIRONMENTAL sourceGUID = "0x0000000000000000", sourceName = nil
-
-Suffixes
-Event Prefix Description
-_DAMAGE Triggered on damage to health. Nothing Special. returns a number greater than or equal to zero)
-
-_MISSED
-Triggered When Effect isn't applied but mana/energy is used IE: ABSORB BLOCK DEFLECT DODGE EVADE IMMUNE MISS
-PARRY REFLECT RESIST
-
-_HEAL Triggered when a unit is healed
-
-_ENERGIZE
-Any effect that restores energy/mana. Spell/trinket/item set bonuses can trigger this event. IE: Vampiric Touch, or Mark of
-Defiance (Trinket)
-
-_DRAIN Same as _ENERGIZE but this time you are losing energy/mana. Caused by enemies.
-
-_LEECH Same as _DRAIN, but the source unit will simultaneously receive the same kind of energy (specified in extraAmount)
-
-_INTERRUPT Spellcasting being interrupted by an ability such as Kick or Pummel.
-
-_DISPEL A buff or debuff being actively dispelled by a spell like Remove Curse or Dispel Magic.
-
-_DISPEL_FAILED A failed attempt to dispel a buff or debuff, most likely due to immunity.
-
-_AURA_STOLEN A buff being transferred from the destination unit to the source unit (i.e. mages' Spellsteal).
-
-_EXTRA_ATTACKS
-Unit gains extra melee attacks due to an ability (like Sword Specialization or Windfury). These attacks usually happen in
-brief succession 100-200ms following this event.
-
-_AURA_APPLIED
-Triggered When Buffs/Debuffs are Applied. Note: This event doesn't fire if a debuff is applied twice without being removed.
-IE: casting Vampiric Embrace twice in a row only triggers this event once. This can make it difficult to track whether a debuff
-was successfully reapplied to the target. However, for instant cast spells, SPELL_CAST_SUCCESS can be used.
-
-_AURA_REMOVED Triggered When Buffs/Debuffs expire.
-
-_AURA_APPLIED_DOSE
-Triggered by stacking Debuffs if the debuff is already applied to a target. IE: If you cast Mind Flay twice it causes 2 doses of
-shadow vunerability, the first time it will trigger, SPELL_AURA_APPLIED (arg10 = shadow vulnerability), and
-SPELL_AURA_APPLIED_DOSE (arg10 = shadow vunerability) the second. The last argument reflects the new number of
-doses on the unit.
-
-_AURA_REMOVED_DOSE The opposite of _AURA_APPLIED_DOSE, reducing the amount of doses on a buff/debuff on the unit.
-
-_AURA_REFRESH Resets the expiration timer of a buff/debuff on the unit.
-
-_AURA_BROKEN A buff or debuff is being removed by melee damage
-
-_AURA_BROKEN_SPELL A buff or debuff is being removed by spell damage (specified in extraSpell...)
-
-_CAST_START
-Triggered when a spell begins casting. Instant Cast and channeled spells don't invoke this event. They trigger
-
-_CAST_SUCCESS, _MISS instead.
-
-_CAST_SUCCESS
-Triggered when channeled spells begin or when instant cast spells are cast. This (obviously) isn't triggered when this spell
-misses. On a miss SPELL_MISS will be triggered instead. Also, spells that invoke _CAST_START don't trigger this event
-when they are done casting. Use _SPELL_MISS or _SPELL_DAMAGE or _SPELL_AURA_APPLIED to see when they were
-cast
-
-_CAST_FAILED
-If the cast fails before it starts (IE invalid target), then _CAST_START never triggers. However it is possible for a cast to fail
-after beginning. (IE you jump, move, hit escape etc.)
-
-_INSTAKILL Immediately kills the destination unit (usually happens when warlocks sacrifice their minions).
-
-_DURABILITY_DAMAGE
-
-_DURABILITY_DAMAGE_ALL
-
-_CREATE Creates an object (as opposed to an NPC who are 'summoned') like a hunter's trap or a mage's portal.
-
-_SUMMON Summmons an NPC such as a pet or totem.
-
-Special Events
-Event Description
-UNIT_DIED destGUID and destName refer to the unit that died.
-PARTY_KILL includes both sourceGUID and destGUID, but only reports for you (not in a party) or your other 4 party members (not raid members)
-]]--
