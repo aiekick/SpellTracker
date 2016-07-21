@@ -144,7 +144,7 @@ if (GetLocale() == "frFR") then
 	L["TRACK_SRC"] = "Suivi de l'émission";
 	L["TRACK_DST"] = "Suivi de la réception";
 	L["TRACK_ZONE"] = "Mode de Suivi de Zone par ";
-	L["PLAYER_TRACKED"] = " Joueur Suivi : ";
+	L["PLAYER_TRACKED"] = " Joueur/Pnj Suivi : ";
 	L["LeftMouseButton"] = "LMB :";
 	L["RightMouseButton"] = "LMD :";
 	L["INFOS_CUR_TRACK"] = "Infos à propos du suivi actuel :";
@@ -198,7 +198,7 @@ if (GetLocale() == "frFR") then
 	L["NOCOMBAT_MSG1"] = "NE PEUT PAS FONTIONNER PENDANT UN COMBAT";
 	L["TOOLTIP_MSG3"] = "Configurer la structure de donnée";
 	L["TOOLTIP_MSG4"] = "Suivi de moi même";
-	L["TOOLTIP_MSG5"] = "Suivi du joueur selectionné";
+	L["TOOLTIP_MSG5"] = "Suivi de la cible actuelle";
 	L["TOOLTIP_MSG6"] = "Suivi de zone";
 	L["TOOLTIP_MSG7"] = "Suivi du raid";
 	L["TOOLTIP_MSG8"] = "Suivi du groupe";
@@ -304,7 +304,7 @@ else
 	L["TRACK_SRC"] = "Track Source";
 	L["TRACK_DST"] = "Track Dest";
 	L["TRACK_ZONE"] = " Zone Tracking Mode by ";
-	L["PLAYER_TRACKED"] = " Player Tracked : ";
+	L["PLAYER_TRACKED"] = " Player/Mob Tracked : ";
 	L["LeftMouseButton"] = "LMB :";
 	L["RightMouseButton"] = "DMB :";
 	L["INFOS_CUR_TRACK"] = "Infos about current track :";
@@ -361,7 +361,7 @@ else
 	L["NOCOMBAT_MSG1"] = "CANT WORK WHILE IN FIGHT";
 	L["TOOLTIP_MSG3"] = "Configure Datas Structure";
 	L["TOOLTIP_MSG4"] = "My Player Tracking";
-	L["TOOLTIP_MSG5"] = "Selected Player Tracking";
+	L["TOOLTIP_MSG5"] = "Current Target Tracking";
 	L["TOOLTIP_MSG6"] = "Zone Tracking";
 	L["TOOLTIP_MSG7"] = "Raid Zone Tracking";
 	L["TOOLTIP_MSG8"] = "Group Zone Tracking";
@@ -628,6 +628,7 @@ function SpellTrackerFrame_Init(self)
 		SpellTrackerFrame:SetWidth(SpellTrackerDB.Params.FrameWidth);
 		SpellTrackerFrame:SetHeight(SpellTrackerDB.Params.FrameHeight);
 		SpellTrackerPopupDataStructDlg_Create();
+		SpellTrackerPopupReportDlg_Create();
 		SpellTrackerPopupColumnFilterDlg_Create();
 	end
 end
@@ -1005,6 +1006,117 @@ function SpellTrackerPopupColumnFilterDlgVirtualScrollBar_OnMouseWheel (self, de
 		SpellTrackerPopupColumnFilterDlgBtn_Update(SpellTrackerDB.Params.CurrentColumnFilter, true);
 	end
 end	
+--- Report Dlg Popup
+function SpellTrackerPopupReportDlg_Create()
+	local ReportDlg = CreateFrame("Frame", "SSpellTrackerPopupReportDlg", UIParent, "SpellTrackerPopupTemplate");
+	if ( ReportDlg ) then
+		ReportDlg:SetFrameStrata("FULLSCREEN_DIALOG");
+		ReportDlg:SetToplevel(1);
+		ReportDlg:Hide();
+		ReportDlg:SetWidth(180);
+		ReportDlg:SetPoint("TOPLEFT", SpellTrackerFrameMainMenuTitleFilterBtn, "BOTTOMLEFT", 0,0);
+		ReportDlg.Buttons = {};
+		ReportDlg.var = {};
+		ReportDlg.var.FilterString = "";
+		
+		local offsetY = -2;
+		local itW = ReportDlg:GetWidth();
+		local itH = SpellTrackerDB.Params.SpellBarHeight;
+		local lastBar;
+		--[[
+		for k, v in ipairs(SpellTrackerDB.Params.DataStructItems) do
+			local frmName = "SSpellTrackerPopupReportDlggBar"..tostring(k);
+			local bar = CreateFrame("Button", frmName, ReportDlg, "SpellTrackerPopupButtonTemplate");
+			if ( bar ) then
+				ReportDlg.Buttons[k] = bar;
+				bar:SetScript("OnClick", SpellTrackerPopupReportDlgBtn_Click);
+				bar:RegisterForClicks("AnyUp");
+				bar.var = {};
+				bar.var.Label = _G[frmName.."Label"];
+				--bar.var.Label:SetFont(FontPath.name, FontPath.size);
+				bar:SetParent(ReportDlg);
+				if ( lastBar == nil ) then
+					bar:SetPoint("TOPLEFT", ReportDlg, "TOPLEFT", 0, 0);
+				else
+					bar:SetPoint("TOPLEFT", lastBar, "BOTTOMLEFT", 0, offsetY);
+				end
+				bar:SetWidth(itW);
+				bar:SetHeight(itH);
+				lastBar = bar;
+			end
+		end
+		]]--
+		
+		local ApplyBtnHeight = 20;
+		local ApplyButton = CreateFrame("Button", "SpellTrackerPopupReportDlgApplyBtn", ReportDlg, "UIPanelButtonTemplate");
+		if ( ApplyButton ) then
+			--ApplyButton:SetFrameStrata("FULLSCREEN_DIALOG");
+			--ApplyButton:SetToplevel(1);
+			ApplyButton:SetWidth(180);
+			ApplyButton:SetPoint("BOTTOMLEFT", ReportDlg, "BOTTOMLEFT", 0, 0);
+			ApplyButton:SetText("Apply");
+			ApplyButton:SetHeight(ApplyBtnHeight);
+			ApplyButton:SetScript("OnClick", SpellTrackerPopupReportDlg_Apply);
+		end
+		
+		local NewHeight = #SpellTrackerDB.Params.DataStructItems * ( itH + math.abs(offsetY) ) + ApplyBtnHeight;
+		ReportDlg:SetHeight(NewHeight);		
+	end
+end
+function SpellTrackerPopupReportDlgBtn_Click(self) -- show hide report popup
+	if ( SSpellTrackerPopupReportDlg ) then
+		--[[if ( SSpellTrackerPopupReportDlg:IsVisible() ) then
+			SpellTrackerPopupReportDlg_Hide();
+		else
+			SpellTrackerPopupReportDlg_Show(self);
+		end]]
+	end
+end
+function SpellTrackerPopupReportDlg_Show(self) -- report popup dlg show
+	local ReportDlg = SSpellTrackerPopupReportDlg;
+	--ReportDlg.var.FilterString = SpellTrackerDB.Params.DataStructString;
+	SpellTrackerPopupReportDlgBtn_Update();
+	ReportDlg:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 0, 0);
+	ReportDlg:Show();
+end
+function SpellTrackerPopupReportDlg_Hide() -- report popup dlg hide
+	local ReportDlg = SSpellTrackerPopupReportDlg;
+	ReportDlg:Hide();
+end
+function SpellTrackerPopupReportDlg_Apply() -- report popup dlg apply
+	local function PopupReportDlg_Accept(self)
+        local popup;
+        if self:GetParent():GetName() == "UIParent" then popup = self;
+        else popup = self:GetParent();
+        end
+        
+		local ReportDlg = SSpellTrackerPopupReportDlg;
+		--SpellTracker:ChangeDataStruct(ReportDlg.var.FilterString);			
+		ReportDlg:Hide();
+		
+        popup:Hide(); -- on ferme la boite de dialogue
+    end
+	
+	local function PopupReportDlg_Cancel(self)
+        local popup;
+        if self:GetParent():GetName() == "UIParent" then popup = self;
+        else popup = self:GetParent();
+        end
+        
+		local ReportDlg = SSpellTrackerPopupReportDlg;
+		ReportDlg:Hide();
+		
+        popup:Hide(); -- on ferme la boite de dialogue
+    end
+	
+	StaticPopupDialogs["CLEAR_VIEW_DLG"].OnAccept = PopupReportDlg_Accept;
+	StaticPopupDialogs["CLEAR_VIEW_DLG"].OnCancel = PopupReportDlg_Cancel;
+	
+	StaticPopup_Show("CLEAR_VIEW_DLG");
+end
+function SpellTrackerPopupReportDlgBtn_Update() -- DataStruct dlg iew update
+	local ReportDlg = SSpellTrackerPopupReportDlg;
+end
 ---
 function hideSpellTrackerFrameButton_OnClick(self) -- Bouton pour fermer la mainFrame
 	SpellTrackerMinimapButton_OnClick(self);
@@ -1108,7 +1220,7 @@ function SpellTrackerButtonTemplate_OnClick(self)
 	SpellTracker:UpdateFilterButton(self);
 	SpellTracker:UpdateDisplayedFiterFromButtons();
 end
-function SpellTrackerFilterButtonTemplate_OnClick(self, button) -- filter to activate or deactivate here
+function SpellTrackerFilterButtonTemplate_OnClick(self, button) -- comlumn critete filter to activate or deactivate here
 	if ( button == "RightButton" ) then
 		if ( self.help and string.match(SpellTrackerDB.Params.DisplayedFilters, self.help) ) then
 			--SpellTrackerPopupColumnFilterDlg_ShowOrHide(self);
@@ -1558,7 +1670,7 @@ end
 function SpellTrackerBarSpellIconBtn_OnEnter(self) -- 0.56 spell tooltip
 	if ( self.SpellId ) then 
 		GameTooltip:SetOwner(self);
-		GameTooltip:SetText(L["SPELL"].." : "..self.SpellName);
+		GameTooltip:SetText(L["SPELL"].." : "..self.SpellName.. "("..self.SpellId..")");
 		GameTooltip:AddLine(L["TOOLTIP_MSG1"]);
 		if ( self.TickSpellId ) then
 			GameTooltip:AddLine(L["TOOLTIP_MSG2"]);
@@ -1673,7 +1785,7 @@ function SpellTrackerFrame_OnEvent(self, event, ...)
 	end
 	SpellTracker:CalcEventsPerSec(true); -- refresh ev/s
 end
-function SpellTracker_FilterDropDownMenu_Init() -- FILTER MENU -- 0.54 ok
+function SpellTracker_FilterDropDownMenu_Init() -- FILTER - ChangeDataStruct - MENU -- 0.54 ok - not used line 506
 	-- INIT TARGET
 	UIDropDownMenu_Initialize(SpellTracker_FilterDropDownMenu, SpellTracker_FilterDropDownMenu_OnLoad, "MENU");
 	SpellTrackerFrameMainMenuTitleFilterBtn:SetScript("OnClick", 
@@ -1682,7 +1794,7 @@ function SpellTracker_FilterDropDownMenu_Init() -- FILTER MENU -- 0.54 ok
 		end
 	);
 end
-function SpellTracker_FilterDropDownMenu_OnLoad(self, lvl) -- FILTER MENU -- 0.54 ok
+function SpellTracker_FilterDropDownMenu_OnLoad(self, lvl) -- FILTER - ChangeDataStruct - MENU -- 0.54 ok - not used line 506
 	if ( SpellTracker:IsInCombat() == false ) then
 		lvl = lvl or 1;
 		local str = "";
@@ -1716,7 +1828,7 @@ function SpellTracker_FilterDropDownMenu_OnLoad(self, lvl) -- FILTER MENU -- 0.5
 		print(L["NOCOMBAT_MSG1"]);
 	end
 end
-function SpellTracker_FilterDropDownMenu_ShowTootlip(self) -- FILTER MENU
+function SpellTracker_FilterDropDownMenu_ShowTootlip(self) -- FILTER - ChangeDataStruct - MENU -- 0.54 ok - not used line 506
 	GameTooltip:SetOwner(self);
 	local strToShow = L["TOOLTIP_MSG3"];
 	GameTooltip:SetText(strToShow);
@@ -2115,7 +2227,7 @@ function SpellTracker:ResetView()
 	SpellTracker:UpdateFrame();
 end
 -- Column filtering
-function SpellTracker:DoColumnFiltering() -- 0.70
+function SpellTracker:DoColumnFiltering() -- 0.70 column filtering
 	SpellTracker:PrepareColumnFilter();
 	SpellTracker:FillListToSortAndNodeToSortFromColumnFilter(true);
 	if ( SpellTrackerDB.ViewPlaying ~= L["PAUSE_VIEW_UPDATING"] ) then -- 0.47
@@ -2705,7 +2817,7 @@ function SpellTracker:AutoRedimSpellTrackerFrame(CountDisplayedBar)
 	-- redim buttons on FilterFrame
 	SpellTracker:AutoResizeFilterFrame();
 end
-function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about overlappiung of bar ( first white bar )
+function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about overlappiung of bar ( first white bar ) -- 0.77 report
 	local mFrameContainerLevel = SpellTrackerFrameContainer:GetFrameLevel();
 	
 	local GuiBar = CreateFrame("Button", frmName, SpellTrackerFrame, "SpellTrackerBarTemplate");
@@ -2717,7 +2829,12 @@ function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about 
 	GuiBar.GUI.SpellIconBtn = _G[frmName.."SpellIconBtn"];
 	GuiBar.GUI.SpellIconBtn:SetFrameLevel(mFrameContainerLevel + 9);
 	
-	GuiBar.GUI.SpellIcon = _G[frmName.."SpellIconBtnTex"];
+	GuiBar.GUI.SpellIconBtnTex = _G[frmName.."SpellIconBtnTex"];
+	
+	GuiBar.GUI.ReportBtn = _G[frmName.."ReportBtn"];
+	GuiBar.GUI.ReportBtn:SetFrameLevel(mFrameContainerLevel + 9);
+	
+	GuiBar.GUI.ReportBtn:SetScript("OnClick", SpellTrackerPopupReportDlgBtn_Click);
 	
 	GuiBar.GUI.TreeIcon = _G[frmName.."StatusBarSpellHitTreeIcon"];
 	
@@ -2792,12 +2909,15 @@ function SpellTracker:CreateBar(frmName) -- 0.48 TreeIcon -- 0.51 bug fix about 
 	
 	return GuiBar;
 end
-function SpellTracker:ResetBar(GuiBar) -- 0.48 TreeIcon
+function SpellTracker:ResetBar(GuiBar) -- 0.48 TreeIcon -- 0.77 report
 	if ( GuiBar ) then
 		GuiBar.GUI.SpellIconBtn.SpellId = nil;
 		
-		GuiBar.GUI.TreeIcon:SetTexture(1,1,1,0); -- on la rend transparante => texture:SetTexture(r, g, b[, a]) avec a = 0
-		GuiBar.GUI.SpellIcon:SetTexture(1,1,1,0); -- on la rend transparante => texture:SetTexture(r, g, b[, a]) avec a = 0
+		GuiBar.GUI.TreeIcon:SetTexture(nil); 
+		GuiBar.GUI.SpellIconBtnTex:SetTexture(nil); 
+		GuiBar.GUI.ReportBtn:SetNormalTexture(nil);
+		GuiBar.GUI.ReportBtn:SetHighlightTexture(nil);
+	
 		GuiBar.GUI.TreeSymbolLabel:SetText("");
 		GuiBar.GUI.SpellNameLabel:SetText("");
 		GuiBar.GUI.SpellAmountLabel:SetText("");
@@ -3227,6 +3347,12 @@ function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position
 			GuiBar.GUI.TreeIcon:SetTexture("Interface\\MoneyFrame\\Arrow-Right-Up"); -- Tree Icon
 		end
 
+		GuiBar.GUI.ReportBtn:SetNormalTexture(nil);
+		GuiBar.GUI.ReportBtn:SetHighlightTexture(nil);
+	
+		--GuiBar.GUI.ReportBtn:SetNormalTexture("Interface\\Buttons\\UI-GuildButton-MOTD-Up");
+		--GuiBar.GUI.ReportBtn:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight");
+	
 		GuiBar.VAR.SpellIndexer = spellStruct.Indexer;
 
 		GuiBar.VAR.SpellListToSort_Position = SpellListToSort_Position;
@@ -3262,7 +3388,7 @@ function SpellTracker:UpdateGuiBar(GuiBar, spellStruct, SpellListToSort_Position
 		local SpellName  = "";
 		local SpellId = "";
 		if ( spellStruct.SpellName ) then
-			GuiBar.GUI.SpellIcon:SetTexture(spellStruct.SpellIconTex); -- Spell Icon
+			GuiBar.GUI.SpellIconBtnTex:SetTexture(spellStruct.SpellIconTex); -- Spell Icon
 			SpellName = spellStruct.SpellName;
 			SpellId = spellStruct.SpellId;
 			GuiBar.GUI.SpellIconBtn.SpellId = SpellId;
@@ -3877,6 +4003,7 @@ function SpellTracker:GetAllSpellTexture(spellID) -- 0.40 / pour remplacer
 end
 function SpellTracker:GetSpellHyperlink(spellID) -- 0.41 / OK
 	local name, rank = GetSpellInfo(spellID);
+	name = name or "";
 	rank = rank or "";
 	return "|Hspell:" .. spellID .."|h|r|cff71d5ff[" .. name .. " " .. rank .. "]|r|h";
 end

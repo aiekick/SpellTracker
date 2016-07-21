@@ -1,7 +1,7 @@
-## Interface: 60200
+## Interface: 70000
 ## Title: SpellTracker
 ## Author: Xulos (Dalaran Ally EU)
-## Version: r0.77
+## Version: r0.78
 ## Notes: Track Stats (Hit, Crit, Absorb, etc) (Damage, Heal, Missed) of Spells launched or received by player / target / group / raid / zone
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
